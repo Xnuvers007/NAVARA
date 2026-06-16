@@ -54,6 +54,7 @@ let mapMode = 'cluster';
 let isSubmitting = false;
 let locationMode = 'single';
 let clickStep = 0;
+let activeMapSelection = null;
 let pendingLat = null, pendingLng = null;
 let pendingLatEnd = null, pendingLngEnd = null;
 let tempMarkers = [];
@@ -315,20 +316,47 @@ function initMap() {
 
 function onMapClick(e) {
   if (!document.getElementById('modal-overlay').classList.contains('open')) return;
-  if (locationMode === 'single') {
+
+  if (activeMapSelection === 'start') {
     setStartPoint(e.latlng.lat, e.latlng.lng);
+    activeMapSelection = null;
+    restoreModal();
+    announceToSR('Titik awal dipilih dari peta.');
+  } else if (activeMapSelection === 'end') {
+    setEndPoint(e.latlng.lat, e.latlng.lng);
+    activeMapSelection = null;
+    restoreModal();
+    announceToSR('Titik akhir rute dipilih dari peta.');
   } else {
-    if (clickStep === 0) {
+    if (locationMode === 'single') {
       setStartPoint(e.latlng.lat, e.latlng.lng);
-      clickStep = 1;
-      updateTipText('Sekarang klik titik <strong>akhir</strong> rute kejadian pada peta.');
-      announceToSR('Titik awal dipilih. Klik lokasi akhir kejadian di peta.');
     } else {
-      setEndPoint(e.latlng.lat, e.latlng.lng);
-      clickStep = 0;
-      announceToSR('Titik akhir rute dipilih. Silakan isi formulir dan kirim laporan.');
+      if (clickStep === 0) {
+        setStartPoint(e.latlng.lat, e.latlng.lng);
+        clickStep = 1;
+        updateTipText('Sekarang klik titik <strong>akhir</strong> rute kejadian pada peta.');
+        announceToSR('Titik awal dipilih. Klik lokasi akhir kejadian di peta.');
+      } else {
+        setEndPoint(e.latlng.lat, e.latlng.lng);
+        clickStep = 0;
+        announceToSR('Titik akhir rute dipilih. Silakan isi formulir dan kirim laporan.');
+      }
     }
   }
+}
+
+function hideModalForMapSelect(type) {
+  activeMapSelection = type;
+  const overlay = document.getElementById('modal-overlay');
+  overlay.style.opacity = '0';
+  overlay.style.pointerEvents = 'none';
+  showToast('Klik lokasi pada peta', 'info');
+}
+
+function restoreModal() {
+  const overlay = document.getElementById('modal-overlay');
+  overlay.style.opacity = '';
+  overlay.style.pointerEvents = '';
 }
 
 /* ─── EVENT LISTENERS ────────────────────────────────────────────────────── */
@@ -372,21 +400,41 @@ function initEventListeners() {
     if (e.target === e.currentTarget) closeModal();
   });
 
-  // GPS
-  document.getElementById('btn-gps')?.addEventListener('click', useGPS);
+  // GPS Buttons
+  document.getElementById('btn-gps-start')?.addEventListener('click', () => useGPS('start'));
+  document.getElementById('btn-gps-end')?.addEventListener('click', () => useGPS('end'));
+
+  // Map Selection Buttons
+  document.getElementById('btn-map-start')?.addEventListener('click', () => hideModalForMapSelect('start'));
+  document.getElementById('btn-map-end')?.addEventListener('click', () => hideModalForMapSelect('end'));
 
   // Manual Coordinate Input
   const manualCoord = document.getElementById('manual-coord');
   if (manualCoord) {
     manualCoord.addEventListener('input', e => {
-      // Basic sanitization
       let val = e.target.value.replace(/[<>'"]/g, '').trim();
       const parts = val.split(',');
       if (parts.length >= 2) {
         const lat = parseFloat(parts[0].trim());
         const lng = parseFloat(parts[1].trim());
         if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-          setStartPoint(lat, lng);
+          setStartPoint(lat, lng, false);
+          map.setView([lat, lng], 14);
+        }
+      }
+    });
+  }
+
+  const manualCoordEnd = document.getElementById('manual-coord-end');
+  if (manualCoordEnd) {
+    manualCoordEnd.addEventListener('input', e => {
+      let val = e.target.value.replace(/[<>'"]/g, '').trim();
+      const parts = val.split(',');
+      if (parts.length >= 2) {
+        const lat = parseFloat(parts[0].trim());
+        const lng = parseFloat(parts[1].trim());
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          setEndPoint(lat, lng, false);
           map.setView([lat, lng], 14);
         }
       }
@@ -624,16 +672,19 @@ function updateTipText(html) {
 }
 
 /* ─── LOCATION POINTS ────────────────────────────────────────────────────── */
-function setStartPoint(lat, lng) {
+function setStartPoint(lat, lng, updateInput = true) {
   pendingLat = lat; pendingLng = lng;
   document.getElementById('field-lat').value = lat.toFixed(6);
   document.getElementById('field-lng').value = lng.toFixed(6);
 
   const dot = document.getElementById('loc-dot-start');
   dot.classList.add('active');
-  const manualCoord = document.getElementById('manual-coord');
-  if (manualCoord && document.activeElement !== manualCoord) {
-    manualCoord.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  
+  if (updateInput) {
+    const manualCoord = document.getElementById('manual-coord');
+    if (manualCoord && document.activeElement !== manualCoord) {
+      manualCoord.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
   }
   document.getElementById('location-indicator').classList.add('has-start');
 
@@ -644,14 +695,19 @@ function setStartPoint(lat, lng) {
   updateTempLine();
 }
 
-function setEndPoint(lat, lng) {
+function setEndPoint(lat, lng, updateInput = true) {
   pendingLatEnd = lat; pendingLngEnd = lng;
   document.getElementById('field-lat-end').value = lat.toFixed(6);
   document.getElementById('field-lng-end').value = lng.toFixed(6);
 
   document.getElementById('loc-dot-end').classList.add('active');
-  document.getElementById('loc-text-end').innerHTML =
-    `<i class="fa-solid fa-flag-checkered" style="color:#ef4444;font-size:10px" aria-hidden="true"></i> ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  
+  if (updateInput) {
+    const manualCoordEnd = document.getElementById('manual-coord-end');
+    if (manualCoordEnd && document.activeElement !== manualCoordEnd) {
+      manualCoordEnd.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+  }
 
   if (tempMarkers[1]) map.removeLayer(tempMarkers[1]);
   tempMarkers[1] = L.circleMarker([lat, lng], {
@@ -688,18 +744,23 @@ function resetLocationFields() {
   });
   document.getElementById('loc-dot-start').classList.remove('active');
   document.getElementById('loc-dot-end').classList.remove('active');
-  const locTextStart = document.getElementById('loc-text-start');
-  if (locTextStart) locTextStart.textContent = 'Belum ada lokasi dipilih';
+  
   const manualCoord = document.getElementById('manual-coord');
   if (manualCoord) manualCoord.value = '';
-  document.getElementById('loc-text-end').textContent = 'Titik akhir rute belum dipilih';
+  
+  const manualCoordEnd = document.getElementById('manual-coord-end');
+  if (manualCoordEnd) manualCoordEnd.value = '';
+  
   document.getElementById('location-indicator').classList.remove('has-start');
 }
 
 /* ─── GPS ─────────────────────────────────────────────────────────────────── */
-function useGPS() {
-  const btn = document.getElementById('btn-gps');
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Mencari...';
+function useGPS(type) {
+  const btnId = type === 'start' ? 'btn-gps-start' : 'btn-gps-end';
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>';
   btn.disabled = true;
   btn.setAttribute('aria-label', 'Sedang mencari lokasi GPS...');
   announceToSR('Sedang mencari lokasi GPS Anda...');
@@ -712,9 +773,13 @@ function useGPS() {
   navigator.geolocation.getCurrentPosition(
     pos => {
       const { latitude, longitude } = pos.coords;
-      setStartPoint(latitude, longitude);
+      if (type === 'start') {
+        setStartPoint(latitude, longitude);
+      } else {
+        setEndPoint(latitude, longitude);
+      }
       map.setView([latitude, longitude], 15);
-      btn.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i> Ditemukan';
+      btn.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i>';
       btn.setAttribute('aria-label', 'Lokasi GPS ditemukan');
       announceToSR('Lokasi GPS ditemukan dan ditandai di peta.');
       setTimeout(() => resetGPSBtn(btn), 2000);
@@ -730,9 +795,9 @@ function useGPS() {
 }
 
 function resetGPSBtn(btn) {
-  btn.innerHTML = '<i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> GPS';
+  btn.innerHTML = '<i class="fa-solid fa-satellite-dish" aria-hidden="true"></i>';
   btn.disabled = false;
-  btn.setAttribute('aria-label', 'Gunakan GPS untuk menentukan lokasi saya');
+  btn.setAttribute('aria-label', 'Gunakan GPS untuk menentukan lokasi');
 }
 
 /* ─── MY LOCATION ─────────────────────────────────────────────────────────── */

@@ -640,23 +640,42 @@
       <!-- Lokasi indicator -->
       <div class="location-indicator" id="location-indicator"
         aria-label="Status pemilihan lokasi" role="status" aria-live="polite">
+        
         <div class="loc-group">
           <div class="loc-dot" id="loc-dot-start" aria-hidden="true"></div>
           <div style="flex:1">
-            <label for="manual-coord" style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 2px; display:block">Koordinat Kejadian (Klik Peta):</label>
-            <input type="text" id="manual-coord" placeholder="Contoh: -2.50487, 156.12345" 
-                   style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#fff; width:100%; padding:6px 10px; border-radius:6px; font-family:monospace; font-size:0.95rem; margin-top:2px; outline:none; transition: border-color 0.2s ease;" 
-                   aria-label="Koordinat Lokasi Kejadian" autocomplete="off" required/>
+            <label for="manual-coord" style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 2px; display:block">Koordinat Kejadian:</label>
+            <div style="display:flex; gap: 6px; margin-top: 2px;">
+              <input type="text" id="manual-coord" placeholder="Lat, Lng" 
+                     style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#fff; flex:1; padding:6px 10px; border-radius:6px; font-family:monospace; font-size:0.95rem; outline:none; transition: border-color 0.2s ease;" 
+                     aria-label="Koordinat Lokasi Kejadian" autocomplete="off" required/>
+              <button type="button" class="btn-gps" id="btn-gps-start" title="Gunakan GPS" style="padding: 0 12px; border-radius: 6px; width: auto; margin: 0;" aria-label="Gunakan GPS">
+                <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="btn-gps" id="btn-map-start" title="Pilih dari Peta" style="padding: 0 12px; border-radius: 6px; background: rgba(59,130,246,0.2); color: #60a5fa; width: auto; margin: 0;" aria-label="Pilih dari Peta">
+                <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
         </div>
-        <div class="loc-group route-only hidden" id="loc-group-end">
+
+        <div class="loc-group route-only hidden" id="loc-group-end" style="margin-top: 8px;">
           <div class="loc-dot loc-dot-end" id="loc-dot-end" aria-hidden="true"></div>
-          <span id="loc-text-end">Titik akhir rute belum dipilih</span>
+          <div style="flex:1">
+            <label for="manual-coord-end" style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 2px; display:block">Titik Akhir Rute:</label>
+            <div style="display:flex; gap: 6px; margin-top: 2px;">
+              <input type="text" id="manual-coord-end" placeholder="Lat, Lng" 
+                     style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#fff; flex:1; padding:6px 10px; border-radius:6px; font-family:monospace; font-size:0.95rem; outline:none; transition: border-color 0.2s ease;" 
+                     aria-label="Koordinat Akhir Rute" autocomplete="off"/>
+              <button type="button" class="btn-gps" id="btn-gps-end" title="Gunakan GPS" style="padding: 0 12px; border-radius: 6px; width: auto; margin: 0;" aria-label="Gunakan GPS">
+                <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="btn-gps" id="btn-map-end" title="Pilih dari Peta" style="padding: 0 12px; border-radius: 6px; background: rgba(59,130,246,0.2); color: #60a5fa; width: auto; margin: 0;" aria-label="Pilih dari Peta">
+                <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
         </div>
-        <button type="button" class="btn-gps" id="btn-gps"
-          aria-label="Gunakan GPS untuk menentukan lokasi saya" style="margin-top: 8px; width: 100%;">
-          <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> Gunakan GPS Saya
-        </button>
       </div>
 
       <!-- Kategori -->
