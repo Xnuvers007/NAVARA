@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="id" dir="ltr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="description" content="Menyuluh jalan di tengah gulita, menghalau petaka dalam kebersamaan. NAVARA hadir sebagai pelita kewaspadaan, membimbing langkah Anda menuju tujuan dengan aman dan damai."/>
+  <meta name="author" content="Xnuvers007"/>
+  <meta name="theme-color" content="#0d1117"/>
+  <meta name="color-scheme" content="dark"/>
+
+  <title>NAVARA 🛡️ — Navigasi Aman Berkendara</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json"/>
+  <link rel="apple-touch-icon" href="/assets/icons/icon-512.png"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="NAVARA"/>
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="NAVARA — Navigasi Aman Berkendara"/>
+  <meta property="og:description" content="Menyuluh jalan di tengah gulita, menghalau petaka dalam kebersamaan. Peta rawan kejahatan. By Xnuvers007."/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:image" content="/assets/icons/icon-512.png"/>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <!-- Font Awesome 6 Free -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous"/>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
+
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<!-- ─── Skip navigation (Aksesibilitas: Screen reader / keyboard) ───────────── -->
+<a href="#map" class="skip-link" tabindex="1">Langsung ke Peta</a>
+<a href="#btn-open-report" class="skip-link" tabindex="2">Langsung ke Form Laporan</a>
+
+<!-- ─── Screen Reader announcer (aria-live) ─────────────────────────────────── -->
+<div id="sr-announce" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+<div id="sr-alert" role="alert" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
+
+<!-- ─── PWA Install Banner ──────────────────────────────────────────────────── -->
+<div class="install-banner hidden" id="install-banner" role="banner" aria-label="Banner instalasi aplikasi">
+  <i class="fa-solid fa-mobile-screen" aria-hidden="true"></i>
+  <span>Install NAVARA sebagai aplikasi di perangkat ini</span>
+  <button id="btn-install" class="btn-install-ok" aria-label="Install aplikasi NAVARA">Install</button>
+  <button id="btn-install-dismiss" class="btn-install-dismiss" aria-label="Tutup banner instalasi">
+    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+  </button>
+</div>
+
+<!-- ─── Realtime status bar ────────────────────────────────────────────────── -->
+<div class="realtime-bar" id="realtime-bar" role="status" aria-live="polite" aria-label="Status koneksi real-time">
+  <span class="rt-dot" id="rt-dot" aria-hidden="true"></span>
+  <span id="rt-status">Menghubungkan...</span>
+  <span class="rt-count hidden" id="rt-count" aria-label="Jumlah pengguna online"></span>
+</div>
+
+<!-- ─── HEADER ─────────────────────────────────────────────────────────────── -->
+<header class="header" id="main-header" role="banner">
+  <div class="header-inner">
+    <div class="logo" role="img" aria-label="NAVARA - Navigasi Aman Berkendara">
+      <div class="logo-icon-wrap" aria-hidden="true">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <span class="logo-title">NAVARA</span>
+        <span class="logo-sub">Navigasi Aman Berkendara</span>
+      </div>
+    </div>
+
+    <nav class="header-stats" id="header-stats" role="navigation" aria-label="Statistik ringkas">
+      <div class="stat-pill" aria-label="Total laporan">
+        <span class="stat-dot pulse red" aria-hidden="true"></span>
+        <span id="stat-total" aria-live="polite">—</span> Total
+      </div>
+      <div class="stat-pill" aria-label="Laporan hari ini">
+        <span class="stat-dot pulse green" aria-hidden="true"></span>
+        <span id="stat-today" aria-live="polite">—</span> Hari ini
+      </div>
+      <div class="stat-pill hidden-mobile" aria-label="Laporan minggu ini">
+        <span class="stat-dot pulse yellow" aria-hidden="true"></span>
+        <span id="stat-week" aria-live="polite">—</span> Minggu ini
+      </div>
+    </nav>
+
+    <!-- Header actions -->
+    <div class="header-actions">
+      <button class="btn-ai-header" id="btn-ai-header" aria-label="Analisis AI Pintar">
+        <i class="fa-solid fa-brain" aria-hidden="true"></i> AI Insight
+      </button>
+      <button class="btn-tips-header" id="btn-tips-header" aria-label="Tips keselamatan dan nomor darurat" title="Tips Keselamatan">
+        <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+        <span class="hidden-mobile">Tips</span>
+      </button>
+      <a href="/api-docs.html" target="_blank" class="btn-api-docs" aria-label="Dokumentasi API Terbuka" style="color:#cbd5e1; text-decoration:none; padding:8px 12px; border-radius:8px; border:1px solid #334155; font-size:14px; font-weight:600; display:flex; gap:6px; align-items:center; transition:0.3s; background:#1e293b;">
+        <i class="fa-solid fa-code" aria-hidden="true"></i>
+        <span class="hidden-mobile">API</span>
+      </a>
+      <a href="https://saweria.co/Xnuvers007" target="_blank" rel="noopener noreferrer"
+        class="btn-donate" aria-label="Donasi untuk mendukung server Begal Alert melalui Saweria">
+        <i class="fa-solid fa-heart" aria-hidden="true"></i>
+        <span class="hidden-mobile">Donasi</span>
+      </a>
+      <button class="btn-report-header" id="btn-open-report" aria-label="Buat laporan kejadian baru" aria-haspopup="dialog">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Laporkan
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ─── MAP ────────────────────────────────────────────────────────────────── -->
+<main class="map-wrapper" role="main">
+  <div id="map" aria-label="Peta interaktif rawan begal Indonesia. Gunakan tombol panah untuk navigasi." tabindex="0"></div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar glass" id="filter-bar" role="navigation" aria-label="Filter peta">
+    <div class="filter-bar-header" id="filter-bar-header" role="button" aria-expanded="true" tabindex="0" aria-label="Toggle filter peta">
+      <div class="filter-bar-title"><i class="fa-solid fa-filter" aria-hidden="true"></i> Filter Peta</div>
+      <i class="fa-solid fa-chevron-up" id="filter-toggle-icon" aria-hidden="true"></i>
+    </div>
+    <div class="filter-body" id="filter-body">
+      <!-- Filter Kategori -->
+      <div class="filter-group" id="filter-category-group" role="group" aria-label="Filter kategori kejadian">
+        <button class="filter-btn active" data-cat="all" id="filter-all" aria-pressed="true" aria-label="Tampilkan semua kategori">
+          <i class="fa-solid fa-globe" aria-hidden="true"></i> Semua
+        </button>
+        <button class="filter-btn" data-cat="begal" id="filter-begal" aria-pressed="false" aria-label="Filter begal">
+          <i class="fa-solid fa-knife" aria-hidden="true"></i> Begal
+        </button>
+        <button class="filter-btn" data-cat="copet" id="filter-copet" aria-pressed="false" aria-label="Filter copet">
+          <i class="fa-solid fa-hand-holding" aria-hidden="true"></i> Copet
+        </button>
+        <button class="filter-btn" data-cat="rampok" id="filter-rampok" aria-pressed="false" aria-label="Filter rampok">
+          <i class="fa-solid fa-sack-dollar" aria-hidden="true"></i> Rampok
+        </button>
+        <button class="filter-btn" data-cat="jambret" id="filter-jambret" aria-pressed="false" aria-label="Filter jambret">
+          <i class="fa-solid fa-person-running" aria-hidden="true"></i> Jambret
+        </button>
+        <button class="filter-btn" data-cat="pencurian_kendaraan" id="filter-pencurian" aria-pressed="false" aria-label="Filter curanmor">
+          <i class="fa-solid fa-car-burst" aria-hidden="true"></i> Curanmor
+        </button>
+        <button class="filter-btn" data-cat="tawuran" id="filter-tawuran" aria-pressed="false" aria-label="Filter tawuran">
+          <i class="fa-solid fa-burst" aria-hidden="true"></i> Tawuran
+        </button>
+        <button class="filter-btn" data-cat="pemerasan" id="filter-pemerasan" aria-pressed="false" aria-label="Filter pemerasan">
+          <i class="fa-solid fa-hand-fist" aria-hidden="true"></i> Pemerasan
+        </button>
+        <button class="filter-btn" data-cat="lainnya" id="filter-lainnya" aria-pressed="false" aria-label="Filter lainnya">
+          <i class="fa-solid fa-circle-question" aria-hidden="true"></i> Lainnya
+        </button>
+      </div>
+      <div class="filter-divider" role="separator"></div>
+      <!-- Filter Waktu -->
+      <div class="filter-group" id="filter-waktu-group" role="group" aria-label="Filter waktu kejadian">
+        <span class="filter-label" aria-hidden="true"><i class="fa-regular fa-clock"></i></span>
+        <button class="filter-btn filter-waktu active" data-waktu="all" id="fw-all" aria-pressed="true" aria-label="Semua waktu">
+          <i class="fa-solid fa-asterisk" aria-hidden="true"></i> Semua
+        </button>
+        <button class="filter-btn filter-waktu" data-waktu="dini_hari" id="fw-dini" aria-pressed="false" aria-label="Filter dini hari pukul 00 sampai 05">
+          <i class="fa-solid fa-moon" aria-hidden="true"></i> Dini Hari
+        </button>
+        <button class="filter-btn filter-waktu" data-waktu="pagi" id="fw-pagi" aria-pressed="false" aria-label="Filter pagi pukul 05 sampai 12">
+          <i class="fa-solid fa-sun" aria-hidden="true"></i> Pagi
+        </button>
+        <button class="filter-btn filter-waktu" data-waktu="siang" id="fw-siang" aria-pressed="false" aria-label="Filter siang pukul 12 sampai 16">
+          <i class="fa-solid fa-cloud-sun" aria-hidden="true"></i> Siang
+        </button>
+        <button class="filter-btn filter-waktu" data-waktu="sore" id="fw-sore" aria-pressed="false" aria-label="Filter sore pukul 16 sampai 19">
+          <i class="fa-solid fa-cloud-sun-rain" aria-hidden="true"></i> Sore
+        </button>
+        <button class="filter-btn filter-waktu" data-waktu="malam" id="fw-malam" aria-pressed="false" aria-label="Filter malam pukul 19 sampai 00">
+          <i class="fa-solid fa-star-and-crescent" aria-hidden="true"></i> Malam
+        </button>
+      </div>
+      <div class="filter-divider" role="separator"></div>
+      <!-- Filter Tanggal -->
+      <div class="filter-group" id="filter-date-group" role="group" aria-label="Filter rentang waktu laporan">
+        <span class="filter-label" aria-hidden="true"><i class="fa-regular fa-calendar"></i></span>
+        <button class="filter-btn filter-date active" data-date="all" id="fd-all" aria-pressed="true" aria-label="Semua laporan">Semua</button>
+        <button class="filter-btn filter-date" data-date="today" id="fd-today" aria-pressed="false" aria-label="Laporan hari ini">Hari Ini</button>
+        <button class="filter-btn filter-date" data-date="week" id="fd-week" aria-pressed="false" aria-label="Laporan 7 hari terakhir">7 Hari</button>
+        <button class="filter-btn filter-date" data-date="month" id="fd-month" aria-pressed="false" aria-label="Laporan 30 hari terakhir">30 Hari</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map Controls -->
+  <div class="map-controls glass" id="map-controls" role="group" aria-label="Kontrol tampilan peta">
+    <button class="map-ctrl-btn active" id="ctrl-cluster" title="Mode Cluster - Kelompok marker" aria-label="Aktifkan mode cluster" aria-pressed="true">
+      <i class="fa-solid fa-circle-nodes" aria-hidden="true"></i>
+    </button>
+    <button class="map-ctrl-btn" id="ctrl-heat" title="Mode Heatmap - Peta panas" aria-label="Aktifkan mode heatmap" aria-pressed="false">
+      <i class="fa-solid fa-fire-flame-curved" aria-hidden="true"></i>
+    </button>
+    <button class="map-ctrl-btn" id="ctrl-myloc" title="Tampilkan lokasi saya" aria-label="Tampilkan posisi saya di peta">
+      <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <!-- FAB mobile -->
+  <button class="fab-report" id="fab-report" aria-label="Buat laporan kejadian baru" aria-haspopup="dialog">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+    <span>Lapor</span>
+  </button>
+
+  <!-- Legend -->
+  <div class="legend glass" id="map-legend" role="complementary" aria-label="Legenda kategori kejahatan">
+    <div class="legend-header" id="legend-header" role="button" aria-expanded="true" tabindex="0" aria-label="Toggle legenda">
+      <div class="legend-title"><i class="fa-solid fa-list" aria-hidden="true"></i> Kategori</div>
+      <i class="fa-solid fa-chevron-up" id="legend-toggle-icon" aria-hidden="true"></i>
+    </div>
+    <div class="legend-body" id="legend-body">
+      <div class="legend-item"><span class="legend-dot" style="background:#ef4444" aria-hidden="true"></span> Begal</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#f97316" aria-hidden="true"></span> Copet</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#eab308" aria-hidden="true"></span> Rampok</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#a855f7" aria-hidden="true"></span> Jambret</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#06b6d4" aria-hidden="true"></span> Curanmor</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#ec4899" aria-hidden="true"></span> Tawuran</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#84cc16" aria-hidden="true"></span> Pemerasan</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#94a3b8" aria-hidden="true"></span> Lainnya</div>
+      <div class="legend-item"><span class="legend-route" aria-hidden="true">——</span> Ada Rute</div>
+    </div>
+  </div>
+</main>
+
+<!-- ─── STATS PANEL (expandable, covers map) ─────────────────────────────── -->
+<aside class="stats-panel glass" id="stats-panel" role="complementary" aria-label="Panel statistik kejahatan">
+  <div class="stats-panel-header">
+    <h2 class="stats-panel-title">
+      <i class="fa-solid fa-chart-bar" aria-hidden="true"></i> Statistik
+    </h2>
+    <div class="stats-panel-actions">
+      <button class="btn-expand-stats" id="btn-expand-stats"
+        aria-label="Perbesar panel statistik" title="Expand / Collapse penuh"
+        aria-expanded="false">
+        <i class="fa-solid fa-expand" id="expand-icon" aria-hidden="true"></i>
+      </button>
+      <button class="btn-toggle-stats" id="btn-toggle-stats"
+        aria-label="Sembunyikan panel statistik" aria-expanded="true">
+        <i class="fa-solid fa-minus" id="toggle-icon" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+  <div class="stats-panel-body" id="stats-panel-body">
+    <div class="stat-row" aria-label="Total laporan">
+      <span><i class="fa-solid fa-map-pin" aria-hidden="true"></i> Total</span>
+      <strong id="sp-total" aria-live="polite">—</strong>
+    </div>
+    <div class="stat-row" aria-label="Laporan hari ini">
+      <span><i class="fa-regular fa-calendar-day" aria-hidden="true"></i> Hari Ini</span>
+      <strong id="sp-today" aria-live="polite">—</strong>
+    </div>
+    <div class="stat-row" aria-label="Laporan minggu ini">
+      <span><i class="fa-regular fa-calendar-week" aria-hidden="true"></i> Minggu</span>
+      <strong id="sp-week" aria-live="polite">—</strong>
+    </div>
+    <div class="stat-row" aria-label="Pengguna online saat ini">
+      <span><i class="fa-solid fa-wifi" aria-hidden="true"></i> Online</span>
+      <strong id="sp-clients" aria-live="polite">—</strong>
+    </div>
+    <hr class="stats-divider" role="separator"/>
+    <div class="stats-cats" id="stats-cats" aria-label="Distribusi per kategori"></div>
+    <hr class="stats-divider" role="separator"/>
+    <div class="stats-cats" id="stats-kota" aria-label="Kota dengan laporan terbanyak"></div>
+    <hr class="stats-divider" role="separator"/>
+
+    <!-- Author & Donate -->
+    <div class="stats-author">
+      <p class="author-label">
+        <i class="fa-solid fa-code" aria-hidden="true"></i>
+        Dibuat oleh <a href="https://github.com/Xnuvers007" target="_blank" rel="noopener noreferrer"
+          class="author-link" aria-label="Profil GitHub Xnuvers007">Xnuvers007</a>
+      </p>
+      <a href="https://saweria.co/Xnuvers007" target="_blank" rel="noopener noreferrer"
+        class="btn-donate-panel" aria-label="Donasi melalui Saweria untuk mendukung server">
+        <i class="fa-solid fa-heart" aria-hidden="true"></i>
+        Dukung Server
+      </a>
+    </div>
+  </div>
+</aside>
+
+<!-- ─── MODAL: Tips Keselamatan (ditampilkan saat buka app) ────────────────── -->
+<div class="modal-overlay tips-overlay" id="tips-overlay" role="dialog" aria-modal="true"
+  aria-labelledby="tips-title" aria-describedby="tips-desc">
+  <div class="modal tips-modal glass" id="tips-modal" tabindex="-1">
+    <div class="tips-header">
+      <div class="tips-header-left">
+        <div class="tips-icon-wrap" aria-hidden="true">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <h2 id="tips-title">Tips Keselamatan Berkendara</h2>
+          <p id="tips-desc" class="tips-subtitle">Tetap waspada, lindungi diri Anda</p>
+        </div>
+      </div>
+      <button class="modal-close" id="tips-close" aria-label="Tutup tips keselamatan">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <!-- Emergency numbers always visible -->
+    <div class="emergency-bar" role="complementary" aria-label="Nomor darurat penting">
+      <span class="emg-label"><i class="fa-solid fa-phone-volume" aria-hidden="true"></i> Darurat:</span>
+      <a href="tel:110" class="emg-btn" aria-label="Telepon polisi 1 1 0">
+        <i class="fa-solid fa-shield" aria-hidden="true"></i> Polisi 110
+      </a>
+      <a href="tel:119" class="emg-btn emg-red" aria-label="Telepon ambulans 1 1 9">
+        <i class="fa-solid fa-truck-medical" aria-hidden="true"></i> Ambulans 119
+      </a>
+      <a href="tel:113" class="emg-btn emg-orange" aria-label="Telepon pemadam kebakaran 1 1 3">
+        <i class="fa-solid fa-fire-extinguisher" aria-hidden="true"></i> Damkar 113
+      </a>
+    </div>
+
+    <!-- Tips tab navigation -->
+    <div class="tips-tabs" role="tablist" aria-label="Kategori tips keselamatan">
+      <button class="tips-tab active" data-tips="begal" role="tab" aria-selected="true" aria-controls="tips-begal" id="tab-begal">
+        <i class="fa-solid fa-knife" aria-hidden="true"></i> Begal
+      </button>
+      <button class="tips-tab" data-tips="copet" role="tab" aria-selected="false" aria-controls="tips-copet" id="tab-copet">
+        <i class="fa-solid fa-hand-holding" aria-hidden="true"></i> Copet
+      </button>
+      <button class="tips-tab" data-tips="jambret" role="tab" aria-selected="false" aria-controls="tips-jambret" id="tab-jambret">
+        <i class="fa-solid fa-person-running" aria-hidden="true"></i> Jambret
+      </button>
+      <button class="tips-tab" data-tips="malam" role="tab" aria-selected="false" aria-controls="tips-malam" id="tab-malam">
+        <i class="fa-solid fa-moon" aria-hidden="true"></i> Malam Hari
+      </button>
+      <button class="tips-tab" data-tips="umum" role="tab" aria-selected="false" aria-controls="tips-umum" id="tab-umum">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i> Umum
+      </button>
+    </div>
+
+    <!-- Tips content panels -->
+    <div class="tips-panels">
+      <!-- Begal -->
+      <div class="tips-panel active" id="tips-begal" role="tabpanel" aria-labelledby="tab-begal">
+        <h3 class="tips-cat-title" style="color:#ef4444"><i class="fa-solid fa-knife" aria-hidden="true"></i> Tips Menghindari Begal</h3>
+        <ol class="tips-list">
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-phone" aria-hidden="true"></i>
+            <div><strong>Segera hubungi polisi 110</strong><p>Jika terjadi begal, keselamatan jiwa lebih utama dari harta benda.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-route" aria-hidden="true"></i>
+            <div><strong>Pilih jalan ramai dan terang</strong><p>Hindari jalan sepi, gelap, atau minim lampu penerangan.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-users" aria-hidden="true"></i>
+            <div><strong>Pulang malam? Beri tahu kerabat</strong><p>Kabari rute perjalanan dan perkiraan waktu tiba kepada keluarga/teman.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+            <div><strong>Waspada motor mencurigakan di belakang</strong><p>Jika ada motor mengikuti lama, langsung ke kantor polisi, SPBU, atau tempat ramai.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-gem" aria-hidden="true"></i>
+            <div><strong>Sembunyikan barang berharga</strong><p>Jangan pamerkan HP, perhiasan, atau tas mewah saat berkendara.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-car" aria-hidden="true"></i>
+            <div><strong>Motor mogok? Cari tempat ramai</strong><p>Dorong kendaraan ke SPBU, minimarket, atau pos satpam terdekat.</p></div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Copet -->
+      <div class="tips-panel" id="tips-copet" role="tabpanel" aria-labelledby="tab-copet" hidden>
+        <h3 class="tips-cat-title" style="color:#f97316"><i class="fa-solid fa-hand-holding" aria-hidden="true"></i> Tips Menghindari Copet</h3>
+        <ol class="tips-list">
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-wallet" aria-hidden="true"></i>
+            <div><strong>Simpan dompet di saku depan</strong><p>Saku belakang mudah diakses copet, gunakan dompet tipis di saku depan celana.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-bag-shopping" aria-hidden="true"></i>
+            <div><strong>Pegang tas di depan tubuh</strong><p>Di kerumunan atau angkot, pegang tas di depan atau gendong di dada.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-bus" aria-hidden="true"></i>
+            <div><strong>Waspada di angkutan umum penuh</strong><p>Momen berhenti mendadak atau kerumunan adalah celah favorit copet.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <div><strong>Waspadai pengalihan perhatian</strong><p>Pura-pura menabrak, menumpahkan sesuatu, atau menunjuk sesuatu adalah trik umum.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-mobile" aria-hidden="true"></i>
+            <div><strong>Jangan sibuk dengan HP di kerumunan</strong><p>Fokus ke sekitar, bukan layar ponsel saat di tempat ramai.</p></div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Jambret -->
+      <div class="tips-panel" id="tips-jambret" role="tabpanel" aria-labelledby="tab-jambret" hidden>
+        <h3 class="tips-cat-title" style="color:#a855f7"><i class="fa-solid fa-person-running" aria-hidden="true"></i> Tips Menghindari Jambret</h3>
+        <ol class="tips-list">
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-mobile" aria-hidden="true"></i>
+            <div><strong>Jangan pegang HP saat berjalan</strong><p>Pelaku jambret sering menyambar HP dari pengendara atau pejalan kaki.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-road" aria-hidden="true"></i>
+            <div><strong>Jalan di trotoar, jauh dari pinggir jalan</strong><p>Jambret biasanya beroperasi dari motor, jalan menjauhi jalan raya.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-headphones" aria-hidden="true"></i>
+            <div><strong>Hindari pakai headset saat sendirian</strong><p>Headset mengurangi kewaspadaan terhadap suara kendaraan yang mendekat.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-camera" aria-hidden="true"></i>
+            <div><strong>Hapalkan ciri kendaraan pelaku</strong><p>Plat nomor, warna, dan jenis motor pelaku sangat membantu polisi.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-phone" aria-hidden="true"></i>
+            <div><strong>Segera lapor ke polisi</strong><p>Simpan nomor 110 di kontak cepat. Laporan cepat meningkatkan peluang penangkapan.</p></div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Malam hari -->
+      <div class="tips-panel" id="tips-malam" role="tabpanel" aria-labelledby="tab-malam" hidden>
+        <h3 class="tips-cat-title" style="color:#6366f1"><i class="fa-solid fa-moon" aria-hidden="true"></i> Tips Perjalanan Malam</h3>
+        <ol class="tips-list">
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
+            <div><strong>Pastikan lampu kendaraan berfungsi</strong><p>Lampu utama dan sein yang baik membuat Anda lebih terlihat dan waspada.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-users" aria-hidden="true"></i>
+            <div><strong>Pergi bersama teman jika bisa</strong><p>Kelompok lebih sulit dijadikan target dibanding perjalanan sendirian.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-map-location" aria-hidden="true"></i>
+            <div><strong>Bagikan lokasi real-time</strong><p>Aktifkan berbagi lokasi ke keluarga/teman via WhatsApp atau Google Maps.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-gas-pump" aria-hidden="true"></i>
+            <div><strong>Isi bahan bakar sebelum malam</strong><p>Hindari berhenti di pinggir jalan gelap saat malam hari.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-battery-full" aria-hidden="true"></i>
+            <div><strong>Pastikan HP terisi penuh</strong><p>HP mati saat darurat bisa jadi masalah serius. Bawa powerbank.</p></div>
+          </li>
+        </ol>
+      </div>
+
+      <!-- Umum -->
+      <div class="tips-panel" id="tips-umum" role="tabpanel" aria-labelledby="tab-umum" hidden>
+        <h3 class="tips-cat-title" style="color:#22c55e"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> Tips Umum Keselamatan</h3>
+        <ol class="tips-list">
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-bell" aria-hidden="true"></i>
+            <div><strong>Aktifkan notifikasi Begal Alert</strong><p>Izinkan notifikasi browser untuk mendapat peringatan kejahatan dekat Anda.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-share-nodes" aria-hidden="true"></i>
+            <div><strong>Bagikan info ke komunitas</strong><p>Informasi kejahatan yang Anda laporkan bisa menyelamatkan orang lain.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <div><strong>Percayai insting Anda</strong><p>Jika situasi terasa tidak aman, segera tinggalkan atau cari tempat aman.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-handshake" aria-hidden="true"></i>
+            <div><strong>Saling menjaga sesama pengendara</strong><p>Jika melihat orang dalam bahaya, bantu atau hubungi polisi.</p></div>
+          </li>
+        </ol>
+        <!-- Nomor darurat lengkap -->
+        <div class="emergency-full" role="complementary" aria-label="Daftar nomor darurat lengkap">
+          <h4><i class="fa-solid fa-phone-volume" aria-hidden="true"></i> Nomor Darurat Indonesia</h4>
+          <div class="emg-grid">
+            <a href="tel:110" class="emg-card" aria-label="Polisi 1 1 0"><i class="fa-solid fa-shield" aria-hidden="true"></i><span>Polisi</span><strong>110</strong></a>
+            <a href="tel:119" class="emg-card" aria-label="Ambulans 1 1 9"><i class="fa-solid fa-truck-medical" aria-hidden="true"></i><span>Ambulans</span><strong>119</strong></a>
+            <a href="tel:113" class="emg-card" aria-label="Pemadam 1 1 3"><i class="fa-solid fa-fire-extinguisher" aria-hidden="true"></i><span>Damkar</span><strong>113</strong></a>
+            <a href="tel:115" class="emg-card" aria-label="SAR 1 1 5"><i class="fa-solid fa-life-ring" aria-hidden="true"></i><span>SAR</span><strong>115</strong></a>
+            <a href="tel:112" class="emg-card" aria-label="Darurat Umum 1 1 2"><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><span>Darurat</span><strong>112</strong></a>
+            <a href="tel:021-1500-454" class="emg-card" aria-label="BPJS Kesehatan"><i class="fa-solid fa-hospital" aria-hidden="true"></i><span>BPJS</span><strong>1500-454</strong></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer tips -->
+    <div class="tips-footer">
+      <label class="tips-no-show" for="tips-no-show-cb">
+        <input type="checkbox" id="tips-no-show-cb" aria-label="Jangan tampilkan tips ini lagi saat membuka aplikasi"/>
+        Jangan tampilkan lagi
+      </label>
+      <button class="btn-close-tips" id="btn-close-tips" aria-label="Tutup dan lanjutkan ke peta">
+        <i class="fa-solid fa-map" aria-hidden="true"></i> Ke Peta
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL: Form Laporan ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true"
+  aria-labelledby="modal-title" aria-describedby="modal-desc">
+  <div class="modal glass" id="report-modal" tabindex="-1">
+    <div class="modal-header">
+      <h2 id="modal-title">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Buat Laporan Kejadian
+      </h2>
+      <button class="modal-close" id="modal-close" aria-label="Tutup form laporan">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+    <p id="modal-desc" class="sr-only">Form untuk melaporkan kejahatan di peta. Pilih lokasi dengan mengklik peta, isi kategori, kota, waktu, dan deskripsi kejadian.</p>
+
+    <!-- Mode toggle -->
+    <div class="mode-toggle-wrap" id="mode-toggle-wrap" role="group" aria-label="Mode penentuan lokasi">
+      <button class="mode-btn active" id="mode-single" data-mode="single"
+        aria-pressed="true" aria-label="Mode satu titik: klik satu lokasi di peta">
+        <i class="fa-solid fa-location-dot" aria-hidden="true"></i> Satu Titik
+      </button>
+      <button class="mode-btn" id="mode-route" data-mode="route"
+        aria-pressed="false" aria-label="Mode rute: klik titik awal dan titik akhir kejadian">
+        <i class="fa-solid fa-route" aria-hidden="true"></i> Rute Kejadian
+      </button>
+    </div>
+
+    <div class="modal-tip" id="modal-tip" role="status" aria-live="polite">
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      <p id="tip-text">Klik lokasi kejadian pada peta, atau gunakan tombol GPS.</p>
+    </div>
+
+    <form id="report-form" novalidate aria-label="Form laporan kejahatan">
+      <input type="hidden" id="field-lat" name="latitude" aria-hidden="true"/>
+      <input type="hidden" id="field-lng" name="longitude" aria-hidden="true"/>
+      <input type="hidden" id="field-lat-end" name="lat_end" aria-hidden="true"/>
+      <input type="hidden" id="field-lng-end" name="lng_end" aria-hidden="true"/>
+
+      <!-- Lokasi indicator -->
+      <div class="location-indicator" id="location-indicator"
+        aria-label="Status pemilihan lokasi" role="status" aria-live="polite">
+        <div class="loc-group">
+          <div class="loc-dot" id="loc-dot-start" aria-hidden="true"></div>
+          <span id="loc-text-start">Belum ada lokasi dipilih</span>
+        </div>
+        <div class="loc-group route-only hidden" id="loc-group-end">
+          <div class="loc-dot loc-dot-end" id="loc-dot-end" aria-hidden="true"></div>
+          <span id="loc-text-end">Titik akhir rute belum dipilih</span>
+        </div>
+        <button type="button" class="btn-gps" id="btn-gps"
+          aria-label="Gunakan GPS untuk menentukan lokasi saya">
+          <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> GPS
+        </button>
+      </div>
+
+      <!-- Kategori -->
+      <div class="form-group">
+        <label for="field-category">
+          <i class="fa-solid fa-tag" aria-hidden="true"></i>
+          Jenis Kejadian <span class="required" aria-label="wajib diisi">*</span>
+        </label>
+        <select id="field-category" name="category" required
+          aria-required="true" aria-describedby="err-category">
+          <option value="" disabled selected>— Pilih kategori —</option>
+          <option value="begal">Begal (perampasan kendaraan bermotor)</option>
+          <option value="copet">Copet / Pencopetan</option>
+          <option value="rampok">Perampokan</option>
+          <option value="jambret">Jambret</option>
+          <option value="pencurian_kendaraan">Pencurian Kendaraan (Curanmor)</option>
+          <option value="pemerasan">Pemerasan / Ancaman Preman</option>
+          <option value="tawuran">Tawuran / Kerusuhan Massa</option>
+          <option value="lainnya">Lainnya</option>
+        </select>
+        <div class="field-error" id="err-category" role="alert" aria-live="assertive"></div>
+      </div>
+
+      <!-- Kota -->
+      <div class="form-group">
+        <label for="field-kota">
+          <i class="fa-solid fa-city" aria-hidden="true"></i>
+          Kota <span class="required" aria-label="wajib diisi">*</span>
+        </label>
+        <select id="field-kota" name="kota" required
+          aria-required="true" aria-describedby="err-kota">
+          <option value="" disabled selected>— Pilih kota —</option>
+          <optgroup label="Jabodetabek">
+            <option>Jakarta Pusat</option><option>Jakarta Utara</option>
+            <option>Jakarta Barat</option><option>Jakarta Selatan</option>
+            <option>Jakarta Timur</option><option>Bogor</option>
+            <option>Depok</option><option>Tangerang</option><option>Bekasi</option>
+          </optgroup>
+          <optgroup label="Jawa">
+            <option>Bandung</option><option>Semarang</option>
+            <option>Yogyakarta</option><option>Solo</option>
+            <option>Malang</option><option>Surabaya</option>
+          </optgroup>
+          <optgroup label="Sumatera">
+            <option>Medan</option><option>Pekanbaru</option>
+            <option>Batam</option><option>Palembang</option>
+            <option>Bandar Lampung</option>
+          </optgroup>
+          <optgroup label="Kalimantan">
+            <option>Balikpapan</option><option>Samarinda</option>
+            <option>Pontianak</option><option>Banjarmasin</option>
+          </optgroup>
+          <optgroup label="Timur Indonesia">
+            <option>Makassar</option><option>Manado</option>
+            <option>Denpasar</option><option>Kupang</option><option>Ambon</option>
+          </optgroup>
+          <option value="Lainnya">Lainnya</option>
+        </select>
+        <div class="field-error" id="err-kota" role="alert" aria-live="assertive"></div>
+      </div>
+
+      <!-- Waktu -->
+      <fieldset class="form-fieldset">
+        <legend>
+          <i class="fa-regular fa-clock" aria-hidden="true"></i>
+          Waktu Kejadian <span class="required" aria-label="wajib diisi">*</span>
+        </legend>
+        <div class="waktu-grid" role="group" aria-label="Pilih waktu kejadian">
+          <label class="waktu-option" for="waktu-dini">
+            <input type="radio" id="waktu-dini" name="waktu" value="dini_hari"
+              aria-label="Dini hari antara pukul 00.00 sampai 05.00"/>
+            <i class="fa-solid fa-moon" aria-hidden="true"></i>
+            <span>Dini Hari</span><small>00-05</small>
+          </label>
+          <label class="waktu-option" for="waktu-pagi">
+            <input type="radio" id="waktu-pagi" name="waktu" value="pagi"
+              aria-label="Pagi antara pukul 05.00 sampai 12.00"/>
+            <i class="fa-solid fa-sun" aria-hidden="true"></i>
+            <span>Pagi</span><small>05-12</small>
+          </label>
+          <label class="waktu-option" for="waktu-siang">
+            <input type="radio" id="waktu-siang" name="waktu" value="siang"
+              aria-label="Siang antara pukul 12.00 sampai 16.00"/>
+            <i class="fa-solid fa-cloud-sun" aria-hidden="true"></i>
+            <span>Siang</span><small>12-16</small>
+          </label>
+          <label class="waktu-option" for="waktu-sore">
+            <input type="radio" id="waktu-sore" name="waktu" value="sore"
+              aria-label="Sore antara pukul 16.00 sampai 19.00"/>
+            <i class="fa-solid fa-cloud-sun-rain" aria-hidden="true"></i>
+            <span>Sore</span><small>16-19</small>
+          </label>
+          <label class="waktu-option" for="waktu-malam">
+            <input type="radio" id="waktu-malam" name="waktu" value="malam"
+              aria-label="Malam antara pukul 19.00 sampai 00.00"/>
+            <i class="fa-solid fa-star-and-crescent" aria-hidden="true"></i>
+            <span>Malam</span><small>19-00</small>
+          </label>
+        </div>
+        <div class="field-error" id="err-waktu" role="alert" aria-live="assertive"></div>
+      </fieldset>
+
+      <!-- Deskripsi -->
+      <div class="form-group">
+        <label for="field-desc">
+          <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+          Deskripsi Singkat <span class="required" aria-label="wajib diisi">*</span>
+        </label>
+        <textarea id="field-desc" name="description" rows="3" maxlength="500"
+          placeholder="Contoh: Terjadi penjambretan di dekat lampu merah, 2 pelaku motor hitam tanpa plat nomor..."
+          required aria-required="true" aria-describedby="err-desc char-count-desc"
+          aria-label="Deskripsi kejadian, minimal 10 karakter maksimal 500 karakter"></textarea>
+        <div class="char-count" id="char-count-desc" aria-live="polite" aria-label="Jumlah karakter">
+          <span id="char-count">0</span>/500 karakter
+        </div>
+        <div class="field-error" id="err-desc" role="alert" aria-live="assertive"></div>
+      </div>
+
+      <div class="anon-note" role="note" aria-label="Informasi privasi laporan">
+        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+        Laporan ini <strong>anonim sepenuhnya</strong>. Alamat IP di-hash dan tidak disimpan.
+      </div>
+
+      <button type="submit" class="btn-submit" id="btn-submit"
+        aria-label="Kirim laporan kejahatan" aria-busy="false">
+        <span id="submit-text">
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Kirim Laporan
+        </span>
+        <span id="submit-spinner" class="spinner hidden" aria-label="Sedang mengirim..." role="status"></span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ─── AI INSIGHT MODAL ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="ai-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title" hidden>
+  <div class="modal glass tips-modal" id="ai-modal" tabindex="-1">
+    <div class="modal-header">
+      <h2 class="modal-title" id="ai-modal-title">
+        <i class="fa-solid fa-brain" style="color: #c084fc;" aria-hidden="true"></i> Analisis AI Pintar
+      </h2>
+      <button class="modal-close" id="ai-modal-close" aria-label="Tutup analisis AI">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div id="ai-content" class="ai-content" aria-live="polite">
+        <!-- Content injected by JS -->
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ─── FOOTER BAR ────────────────────────────────────────────────────────── -->
+<footer class="footer-bar" role="contentinfo" aria-label="Informasi aplikasi">
+  <span class="footer-author">
+    <i class="fa-solid fa-code" aria-hidden="true"></i>
+    by <a href="https://github.com/Xnuvers007" target="_blank" rel="noopener noreferrer"
+      aria-label="GitHub Xnuvers007">Xnuvers007</a>
+  </span>
+  <span class="footer-sep" aria-hidden="true">·</span>
+  <a href="https://saweria.co/Xnuvers007" target="_blank" rel="noopener noreferrer"
+    class="footer-donate" aria-label="Donasi via Saweria untuk mendukung server">
+    <i class="fa-solid fa-heart" aria-hidden="true"></i> Dukung Server
+  </a>
+  <span class="footer-sep" aria-hidden="true">·</span>
+  <button class="footer-tips-btn" id="footer-tips-btn" aria-label="Buka kembali tips keselamatan">
+    <i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Tips
+  </button>
+  <span class="footer-sep" aria-hidden="true">·</span>
+  <a href="tel:110" class="footer-emergency" aria-label="Telepon polisi darurat 1 1 0">
+    <i class="fa-solid fa-phone" aria-hidden="true"></i> Polisi 110
+  </a>
+</footer>
+
+<!-- ─── SCRIPTS ──────────────────────────────────────────────────────────── -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="/js/app.js"></script>
+
+</body>
+</html>

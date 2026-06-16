@@ -1,0 +1,240 @@
+openapi: 3.0.3
+info:
+  title: NAVARA API
+  description: |-
+    Dokumentasi resmi untuk API NAVARA (Navigasi Aman Berkendara).
+    
+    ### 🛡️ Keamanan & Validasi Input
+    API ini dilengkapi dengan pertahanan keamanan yang ketat:
+    - **CSRF Token**: Endpoint yang mengubah data (`POST`, `DELETE`) membutuhkan header `X-CSRF-Token`.
+    - **Sanitasi DOMPurify**: Seluruh input teks (`description`, `comment`) dibersihkan dari tag HTML/Script berbahaya.
+    - **Validasi Koordinat**: `latitude` harus berada di antara `-11.5` s/d `6.5` dan `longitude` antara `94.0` s/d `141.5`. Koordinat yang salah (seperti `-999999`) akan otomatis ditolak dengan `400 Bad Request`.
+    - **Rate Limiting**: Request dibatasi untuk mencegah *spamming* dan eksploitasi.
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Server Lokal
+tags:
+  - name: Reports
+    description: Manajemen data laporan kejahatan
+  - name: Comments
+    description: Komentar dan validasi publik
+  - name: Security
+    description: Keamanan dan CSRF
+paths:
+  /csrf-token:
+    get:
+      summary: Dapatkan CSRF Token
+      description: Endpoint ini mengembalikan token CSRF yang wajib dilampirkan di header `X-CSRF-Token` saat melakukan request POST/DELETE.
+      tags:
+        - Security
+      responses:
+        '200':
+          description: Berhasil mendapatkan token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  token:
+                    type: string
+  /reports:
+    get:
+      summary: Ambil semua laporan
+      description: Mengambil daftar laporan kriminal terbaru.
+      tags:
+        - Reports
+      parameters:
+        - name: limit
+          in: query
+          description: Batas jumlah laporan yang dikembalikan (Max 500)
+          required: false
+          schema:
+            type: integer
+            default: 500
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Buat laporan baru
+      description: Mengirimkan laporan kriminal baru ke server. Akan divalidasi koordinat geografisnya.
+      tags:
+        - Reports
+      parameters:
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - category
+                - description
+                - latitude
+                - longitude
+                - waktu_kejadian
+              properties:
+                category:
+                  type: string
+                  example: begal
+                description:
+                  type: string
+                  example: Hati-hati ada gerombolan bawa sajam.
+                waktu_kejadian:
+                  type: string
+                  enum: [dini_hari, pagi, siang, sore, malam]
+                  example: malam
+                latitude:
+                  type: number
+                  format: float
+                  minimum: -11.5
+                  maximum: 6.5
+                  example: -6.200000
+                longitude:
+                  type: number
+                  format: float
+                  minimum: 94.0
+                  maximum: 141.5
+                  example: 106.816666
+                lat_end:
+                  type: number
+                  format: float
+                lng_end:
+                  type: number
+                  format: float
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request (Validasi Gagal)
+  /reports/stats:
+    get:
+      summary: Statistik Laporan
+      description: Mendapatkan total laporan, jumlah laporan hari ini, dan minggu ini.
+      tags:
+        - Reports
+      responses:
+        '200':
+          description: OK
+  /reports/{id}:
+    delete:
+      summary: Hapus laporan (Admin)
+      description: Melakukan *soft-delete* pada laporan berdasarkan ID. Membutuhkan password admin.
+      tags:
+        - Reports
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: x-admin-key
+          in: header
+          required: true
+          description: Password Admin
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Unauthorized
+  /reports/{id}/comments:
+    get:
+      summary: Ambil komentar laporan
+      description: Mengambil seluruh riwayat komentar dan update status dari sebuah laporan.
+      tags:
+        - Comments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Tambah komentar / Update status
+      description: Mengirim komentar atau mengubah status (aman/tidak aman) pada suatu laporan.
+      tags:
+        - Comments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comment
+              properties:
+                comment:
+                  type: string
+                  example: Pelaku sudah berhasil ditangkap warga!
+                status_update:
+                  type: string
+                  enum: [aman, tidak_aman]
+                  example: aman
+      responses:
+        '201':
+          description: Created
+  /reports/{id}/vote:
+    post:
+      summary: Vote Up/Down
+      description: Memberikan suara upvote (validasi) atau downvote (palsu/hoaks).
+      tags:
+        - Reports
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-CSRF-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - vote
+              properties:
+                vote:
+                  type: string
+                  enum: [up, down]
+                  example: up
+      responses:
+        '200':
+          description: OK

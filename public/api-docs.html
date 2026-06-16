@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NAVARA API Documentation</title>
+  <!-- Favicon / Theme -->
+  <meta name="theme-color" content="#0d1117">
+  <link rel="apple-touch-icon" href="/assets/icons/icon-512.png">
+  
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0d1117; /* Dark background default */
+    }
+    
+    /* Redoc styling overrides for dark mode feel */
+    redoc {
+      display: block;
+      background: #ffffff; 
+    }
+    
+    /* Tombol kembali ke NAVARA */
+    .back-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: #ef4444;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-family: 'Inter', sans-serif;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: all 0.3s;
+    }
+    .back-btn:hover {
+      background: #dc2626;
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  
+  <a href="/" class="back-btn">← Kembali ke Peta NAVARA</a>
+
+  <!-- Redoc Element -->
+  <redoc spec-url='/openapi.yaml'></redoc>
+
+  <!-- Redoc JS -->
+  <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+
+</body>
+</html>
