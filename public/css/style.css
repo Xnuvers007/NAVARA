@@ -1425,3 +1425,120 @@ label i { font-size: 11px; }
 .marker-bahaya { background-color: var(--red) !important; border-color: white !important; animation: pulse-danger 2s infinite; }
 @keyframes pulse-danger { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); } 70% { box-shadow: 0 0 0 10px rgba(239,68,68,0); } 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); } }
 .status-badge-aman { background: rgba(34,197,94,0.2) !important; color: #4ade80 !important; border: 1px solid rgba(34,197,94,0.4); }
+
+/* ─── Leaflet Routing Machine Custom Styling ─────────────────────── */
+.leaflet-routing-container {
+  display: none !important;
+}
+
+.leaflet-routing-container h2 {
+  font-family: var(--font-d), sans-serif !important;
+  font-size: 16px !important;
+  color: #93c5fd !important;
+  margin-bottom: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700 !important;
+}
+
+.leaflet-routing-geocoders input {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+  padding: 10px 12px !important;
+  font-size: 13px !important;
+  width: 100% !important;
+  transition: all 0.2s ease !important;
+  margin-bottom: 6px !important;
+}
+
+.leaflet-routing-geocoders input:focus {
+  outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+
+.leaflet-routing-geocoders input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.leaflet-routing-remove-waypoint {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #fca5a5 !important;
+  border-radius: 50% !important;
+  width: 24px !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  text-align: center !important;
+  transition: all 0.2s ease !important;
+}
+
+.leaflet-routing-remove-waypoint:hover {
+  background: rgba(239, 68, 68, 0.5) !important;
+  color: #fff !important;
+}
+
+.leaflet-routing-geocoder {
+  margin-bottom: 10px !important;
+  position: relative !important;
+}
+
+.leaflet-routing-alternatives-container {
+  display: block !important;
+  margin-top: 12px !important;
+  max-height: 150px !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent !important;
+}
+
+.leaflet-routing-alt, .leaflet-routing-alt-minimized {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+  margin-bottom: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.leaflet-routing-alt:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.leaflet-routing-alt h2 {
+  font-size: 14px !important;
+  color: #fff !important;
+  margin: 0 0 4px 0 !important;
+  font-family: var(--font) !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.leaflet-routing-alt h3 {
+  font-size: 12px !important;
+  color: #9ca3af !important;
+  margin: 0 !important;
+  font-weight: normal !important;
+}
+
+.leaflet-routing-add-waypoint {
+  display: none !important;
+}
+
+.leaflet-routing-container .leaflet-routing-icon {
+  background-image: none !important;
+}
+
+/* Responsiveness on Mobile */
+@media (max-width: 480px) {
+  .leaflet-routing-container {
+    width: 100% !important;
+    max-width: calc(100vw - 16px) !important;
+    right: 8px !important;
+    top: 50px !important;
+  }
+}

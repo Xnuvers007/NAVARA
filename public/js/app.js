@@ -59,6 +59,7 @@ let pendingLat = null, pendingLng = null;
 let pendingLatEnd = null, pendingLngEnd = null;
 let tempMarkers = [];
 let tempLine = null;
+let activeRouteLayer = null;
 let csrfToken = '';
 let captchaToken = '';
 let votedReports = new Set(LS.get('ba_voted', []));
@@ -509,7 +510,7 @@ function initEventListeners() {
       btn.classList.add('active');
       btn.setAttribute('aria-pressed', 'true');
       selectedWaktu = btn.dataset.waktu;
-      renderMarkers();
+      loadReports();
       announceToSR(`Filter waktu: ${btn.textContent.trim()}. ${getFilteredCount()} laporan ditampilkan.`);
     });
   });
@@ -543,6 +544,249 @@ function initEventListeners() {
     announceToSR('Mencari lokasi Anda di peta...');
   });
 
+  // Fitur 1: Safe Routing Custom Modal
+  let routeSelectionMode = null; // 'start' | 'end' | null
+
+  function closeRouteModal() {
+    const overlay = document.getElementById('route-modal-overlay');
+    overlay.classList.remove('open');
+    setTimeout(() => overlay.setAttribute('hidden', 'true'), 300);
+  }
+
+  document.getElementById('ctrl-safe-route')?.addEventListener('click', () => {
+    const btn = document.getElementById('ctrl-safe-route');
+    
+    // Jika rute sudah aktif, batalkan rute
+    if (btn.classList.contains('active')) {
+      if (activeRouteLayer) {
+        map.removeLayer(activeRouteLayer);
+        activeRouteLayer = null;
+      }
+      btn.classList.remove('active');
+      showToast('Navigasi Rute Aman dibatalkan', 'info');
+      return;
+    }
+
+    // Buka modal
+    const overlay = document.getElementById('route-modal-overlay');
+    overlay.removeAttribute('hidden');
+    overlay.classList.add('open');
+  });
+
+  document.getElementById('route-modal-close')?.addEventListener('click', closeRouteModal);
+
+  // Fungsi Search Location (Geocoding via Nominatim)
+  async function searchLocation(queryId, targetInputId, btnId) {
+    const query = document.getElementById(queryId).value.trim();
+    if (!query) return showToast('Masukkan nama tempat yang ingin dicari', 'error');
+    
+    const btn = document.getElementById(btnId);
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=id&limit=1`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        document.getElementById(targetInputId).value = `${parseFloat(data[0].lat).toFixed(6)}, ${parseFloat(data[0].lon).toFixed(6)}`;
+        showToast('Lokasi ditemukan!', 'success');
+      } else {
+        showToast('Lokasi tidak ditemukan', 'error');
+      }
+    } catch (err) {
+      showToast('Gagal menghubungi server pencarian', 'error');
+    } finally {
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('btn-search-start')?.addEventListener('click', () => searchLocation('route-start-search', 'route-start-input', 'btn-search-start'));
+  document.getElementById('btn-search-end')?.addEventListener('click', () => searchLocation('route-end-search', 'route-end-input', 'btn-search-end'));
+
+
+  // GPS Button for Route Start
+  document.getElementById('btn-route-start-gps')?.addEventListener('click', () => {
+    if (!navigator.geolocation) return showToast('Browser tidak mendukung GPS', 'error');
+    const btn = document.getElementById('btn-route-start-gps');
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        document.getElementById('route-start-input').value = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+        btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> GPS';
+        showToast('Lokasi GPS berhasil didapatkan', 'success');
+      },
+      err => {
+        btn.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> GPS';
+        showToast('Gagal mendapatkan lokasi GPS', 'error');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+
+  // Map Click handlers
+  function hideRouteModalTemp() {
+    document.getElementById('route-modal-overlay').classList.remove('open');
+    document.body.style.cursor = 'crosshair';
+    document.getElementById('map').style.cursor = 'crosshair';
+  }
+  function restoreRouteModal() {
+    document.body.style.cursor = '';
+    document.getElementById('map').style.cursor = '';
+    document.getElementById('route-modal-overlay').classList.add('open');
+  }
+
+  document.getElementById('btn-route-start-map')?.addEventListener('click', () => {
+    routeSelectionMode = 'start';
+    hideRouteModalTemp();
+    showToast('Klik titik AWAL pada peta', 'info');
+  });
+
+  document.getElementById('btn-route-end-map')?.addEventListener('click', () => {
+    routeSelectionMode = 'end';
+    hideRouteModalTemp();
+    showToast('Klik titik TUJUAN pada peta', 'info');
+  });
+
+  // Override onMapClick untuk Route Modal
+  const originalOnMapClick = onMapClick;
+  onMapClick = function(e) {
+    if (routeSelectionMode === 'start') {
+      document.getElementById('route-start-input').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+      routeSelectionMode = null;
+      restoreRouteModal();
+      return;
+    }
+    if (routeSelectionMode === 'end') {
+      document.getElementById('route-end-input').value = `${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+      routeSelectionMode = null;
+      restoreRouteModal();
+      return;
+    }
+    // Fallback ke logic lama
+    originalOnMapClick(e);
+  };
+  // Re-bind (karena tadi didefinisikan sebelumnya, kita update listener)
+  map.off('click');
+  map.on('click', onMapClick);
+
+  // Submit Rute (Algoritma Pencarian OSRM & Smart Evaluator)
+  document.getElementById('btn-start-route')?.addEventListener('click', async () => {
+    const startStr = document.getElementById('route-start-input').value;
+    const endStr = document.getElementById('route-end-input').value;
+
+    if (!startStr || !endStr) return showToast('Harap isi titik awal dan tujuan!', 'error');
+
+    const [sLat, sLng] = startStr.split(',').map(s => parseFloat(s.trim()));
+    const [eLat, eLng] = endStr.split(',').map(s => parseFloat(s.trim()));
+
+    if (isNaN(sLat) || isNaN(sLng) || isNaN(eLat) || isNaN(eLng)) {
+      return showToast('Format koordinat tidak valid! Gunakan format: lat, lng', 'error');
+    }
+
+    closeRouteModal();
+    const btn = document.getElementById('ctrl-safe-route');
+    
+    // UI Loading state
+    const originalIcon = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    showToast('Mencari berbagai alternatif rute...', 'info');
+
+    try {
+      // Panggil OSRM API secara mentah (raw fetch)
+      // OSRM minta lng,lat
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${sLng},${sLat};${eLng},${eLat}?overview=full&geometries=geojson&alternatives=true`;
+      const res = await fetch(osrmUrl);
+      const data = await res.json();
+
+      if (!data || data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+        btn.innerHTML = originalIcon;
+        return showToast('Gagal menemukan rute jalan', 'error');
+      }
+
+      // Evaluasi semua rute alternatif
+      const evaluatedRoutes = data.routes.map(route => {
+        let dangerCount = 0;
+        // Koordinat dari GeoJSON formatnya [lng, lat]
+        const coords = route.geometry.coordinates; 
+
+        allReports.forEach(report => {
+          if (!report.latitude || !report.longitude) return;
+          const latLng = L.latLng(report.latitude, report.longitude);
+          let minDistance = Infinity;
+          
+          // Loncat setiap 3 titik untuk performa
+          for (let i = 0; i < coords.length; i += 3) {
+            // L.latLng butuh (lat, lng) jadi harus dibalik
+            const routePoint = L.latLng(coords[i][1], coords[i][0]);
+            const dist = latLng.distanceTo(routePoint);
+            if (dist < minDistance) minDistance = dist;
+          }
+          if (minDistance < 1000) { // < 1000 meter = berbahaya
+            dangerCount++;
+          }
+        });
+
+        return { route, dangerCount };
+      });
+
+      // Algoritma Pemilihan Rute:
+      // 1. Urutkan berdasarkan dangerCount terkecil
+      // 2. Jika dangerCount sama, OSRM sudah mengurutkan berdasarkan tercepat di awal (karena data.routes berurutan tercepat)
+      evaluatedRoutes.sort((a, b) => a.dangerCount - b.dangerCount);
+
+      const safest = evaluatedRoutes[0];
+
+      // Hapus rute lama
+      if (activeRouteLayer) map.removeLayer(activeRouteLayer);
+
+      // Render rute paling aman ke peta
+      activeRouteLayer = L.geoJSON(safest.route.geometry, {
+        style: {
+          color: safest.dangerCount === 0 ? '#3b82f6' : '#ef4444', 
+          weight: 6, 
+          opacity: 0.8
+        }
+      }).addTo(map);
+
+      // Fit map ke rute
+      map.fitBounds(activeRouteLayer.getBounds(), { padding: [50, 50] });
+
+      btn.classList.add('active');
+      btn.innerHTML = originalIcon; // kembalikan ikon router
+
+      if (safest.dangerCount > 0) {
+        Swal.fire({
+          title: 'PERINGATAN!',
+          text: `Semua rute alternatif berbahaya. Rute TERAMAN yang bisa kami temukan tetap melewati ${safest.dangerCount} zona merah. Sangat disarankan untuk menunda perjalanan atau cari jalur putar yang sangat jauh!`,
+          icon: 'warning',
+          background: '#1f2937',
+          color: '#f8fafc',
+          confirmButtonColor: '#ef4444',
+          confirmButtonText: 'Saya Mengerti'
+        });
+      } else {
+        Swal.fire({
+          title: 'Rute Pintar Ditemukan!',
+          text: evaluatedRoutes.length > 1 
+            ? 'Sistem kami telah mengevaluasi beberapa rute dan memilihkan jalur tercepat yang 100% aman (0 irisan bahaya)!'
+            : 'Rute tercepat Anda 100% aman. Tetap waspada di jalan.',
+          icon: 'success',
+          background: '#1f2937',
+          color: '#f8fafc',
+          confirmButtonColor: '#3b82f6',
+          confirmButtonText: 'Mulai Perjalanan'
+        });
+      }
+
+    } catch (err) {
+      console.error(err);
+      btn.innerHTML = originalIcon;
+      showToast('Gagal memproses rute', 'error');
+    }
+  });
+
   // Stats panel toggle & expand
   document.getElementById('btn-toggle-stats')?.addEventListener('click', toggleStatsPanel);
   document.getElementById('btn-expand-stats')?.addEventListener('click', expandStatsPanel);
@@ -573,7 +817,7 @@ function initEventListeners() {
 
 
   // AI Modal
-  document.getElementById('btn-ai-header')?.addEventListener('click', analyzeWithAI);
+  document.getElementById('btn-ai-header')?.addEventListener('click', openAIChat);
   document.getElementById('ai-modal-close')?.addEventListener('click', () => {
     const overlay = document.getElementById('ai-modal-overlay');
     overlay.classList.remove('open');
@@ -1172,6 +1416,10 @@ function addMarker(report) {
       </div>
       ${hasVoted ? '<p class="voted-note" aria-label="Anda sudah memberikan vote">Anda sudah memberi vote</p>' : ''}
       
+      <button type="button" onclick="shareToWA('${report.id}')" aria-label="Share ke WhatsApp Polisi" style="width: 100%; margin-top: 10px; padding: 8px; background: #25D366; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif;">
+        <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Bagikan ke WA Polisi
+      </button>
+      
       <!-- Comments Section -->
       <div class="popup-comments">
         <div class="popup-comments-title">Update Status & Komentar</div>
@@ -1242,7 +1490,27 @@ function addMarker(report) {
   activeMarkers.set(report.id, { marker, polyline });
 }
 
-/* ─── VOTE ────────────────────────────────────────────────────────────────── */
+// Fitur 7: Ekspor Laporan Otomatis ke WhatsApp Polsek
+window.shareToWA = function(id) {
+  const report = allReports.find(r => r.id === id);
+  if (!report) return;
+
+  const cfg = CAT[report.category] || CAT.lainnya;
+  const w = WAKTU_LABELS[report.waktu] || { label: report.waktu };
+  
+  let mapLink = `https://maps.google.com/?q=${report.latitude},${report.longitude}`;
+  if (report.lat_end && report.lng_end) {
+    mapLink = `Awal: https://maps.google.com/?q=${report.latitude},${report.longitude}\nAkhir: https://maps.google.com/?q=${report.lat_end},${report.lng_end}`;
+  }
+
+  const text = `🚨 *LAPORAN DARURAT NAVARA* 🚨\n\n*Jenis Kejadian:* ${cfg.label}\n*Waktu:* ${w.label}\n*Lokasi (Kota):* ${report.kota}\n*Koordinat:* \n${mapLink}\n\n*Deskripsi Kejadian:*\n"${report.description}"\n\n_Dimohon bantuan segera dari petugas yang berwenang._`;
+  
+  const encodedText = encodeURIComponent(text);
+  const waUrl = `https://wa.me/?text=${encodedText}`;
+  window.open(waUrl, '_blank');
+};
+
+/* ─── AI INSIGHT ──────────────────────────────────────────────────────────── */
 async function handleVote(reportId, voteType) {
   if (votedReports.has(reportId)) return;
   try {
@@ -1491,50 +1759,72 @@ async function deleteReportAdmin(reportId) {
   }
 }
 
-/* ─── AI INSIGHT ──────────────────────────────────────────────────────────── */
-function analyzeWithAI() {
+/* ─── AI CHAT ASSISTANT ───────────────────────────────────────────────────── */
+function openAIChat() {
   const overlay = document.getElementById('ai-modal-overlay');
   overlay.removeAttribute('hidden');
   overlay.classList.add('open');
-  
-  const content = document.getElementById('ai-content');
-  content.innerHTML = `
-    <div class="ai-typing">
-      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-      Menganalisis ${allReports.length} laporan...
-    </div>
-  `;
-  announceToSR('Modal AI Insight terbuka. Menganalisis laporan...', false);
+  announceToSR('Modal AI Chat terbuka.', false);
+}
 
-  setTimeout(() => {
-    if (allReports.length === 0) {
-      content.innerHTML = '<p>Belum ada data laporan untuk dianalisis saat ini. Harap tunggu laporan masuk.</p>';
-      announceToSR('Belum ada data laporan untuk dianalisis saat ini.');
-      return;
-    }
+document.getElementById('btn-send-ai')?.addEventListener('click', sendChatMessage);
+document.getElementById('ai-chat-input')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChatMessage();
+});
 
-    const categories = {};
-    const times = {};
-    let latest = allReports[0];
-    
-    allReports.forEach(r => {
-      categories[r.category] = (categories[r.category] || 0) + 1;
-      times[r.waktu] = (times[r.waktu] || 0) + 1;
+async function sendChatMessage() {
+  const input = document.getElementById('ai-chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  const chatContainer = document.getElementById('ai-chat-messages');
+
+  // Append user message
+  const userBubble = document.createElement('div');
+  userBubble.style.cssText = 'background: #374151; padding: 12px; border-radius: 8px; align-self: flex-end; max-width: 85%; border: 1px solid #4b5563;';
+  userBubble.textContent = msg;
+  chatContainer.appendChild(userBubble);
+  input.value = '';
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+
+  // Append typing indicator
+  const typingBubble = document.createElement('div');
+  typingBubble.className = 'ai-msg ai-typing';
+  typingBubble.style.cssText = 'background: rgba(192, 132, 252, 0.15); border: 1px solid rgba(192, 132, 252, 0.3); padding: 12px; border-radius: 8px; align-self: flex-start; max-width: 85%;';
+  typingBubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span> AI sedang mengetik...';
+  chatContainer.appendChild(typingBubble);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (csrfToken) headers['x-csrf-token'] = csrfToken;
+
+    const res = await fetch('/api/reports/chat', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ message: msg })
     });
+    
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    
+    const data = await res.json();
+    
+    chatContainer.removeChild(typingBubble);
 
-    const topCategory = Object.keys(categories).sort((a,b) => categories[b] - categories[a])[0];
-    const topTime = Object.keys(times).sort((a,b) => times[b] - times[a])[0];
-
-    const html = `
-      <p>Berikut adalah hasil analisis AI berdasarkan data terkini:</p>
-      <ul>
-        <li><strong>Titik Rawan Utama:</strong> Kategori kejahatan tertinggi saat ini adalah <strong>${CAT[topCategory]?.label || topCategory}</strong> (${categories[topCategory]} kejadian).</li>
-        <li><strong>Waktu Rawan:</strong> Sebagian besar insiden terjadi pada <strong>${topTime.replace('_', ' ')}</strong>.</li>
-        <li><strong>Tren Terbaru:</strong> Kejadian terakhir dilaporkan di daerah <strong>${latest.kota || 'Tidak diketahui'}</strong>.</li>
-      </ul>
-      <p><strong>Rekomendasi AI:</strong> Hindari berpergian sendirian di area sepi pada ${topTime.replace('_', ' ')}. Pastikan kendaraan terkunci ganda dan selalu waspada terhadap lingkungan sekitar.</p>
-    `;
-    content.innerHTML = html;
-    announceToSR('Analisis AI selesai. Kategori tertinggi adalah ' + (CAT[topCategory]?.label || topCategory) + '.');
-  }, 1800);
+    const aiBubble = document.createElement('div');
+    aiBubble.className = 'ai-msg';
+    aiBubble.style.cssText = 'background: rgba(192, 132, 252, 0.15); border: 1px solid rgba(192, 132, 252, 0.3); padding: 12px; border-radius: 8px; align-self: flex-start; max-width: 85%;';
+    // basic markdown parse for bold
+    const parsedReply = escapeHtml(data.reply || 'Maaf, saya tidak bisa memproses pertanyaan Anda.').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    aiBubble.innerHTML = `<strong style="color: #c084fc;"><i class="fa-solid fa-robot"></i> AI Navara:</strong><br>${parsedReply}`;
+    chatContainer.appendChild(aiBubble);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    announceToSR('AI membalas pesan Anda.');
+  } catch (err) {
+    chatContainer.removeChild(typingBubble);
+    const errorBubble = document.createElement('div');
+    errorBubble.style.cssText = 'background: #7f1d1d; color: #fecaca; padding: 12px; border-radius: 8px; align-self: flex-start; max-width: 85%;';
+    errorBubble.textContent = 'Gagal menghubungi server AI. Silakan coba lagi.';
+    chatContainer.appendChild(errorBubble);
+  }
 }

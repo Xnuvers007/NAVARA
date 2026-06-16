@@ -388,14 +388,16 @@ const helmetConfig = {
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com"
       ],
-      // Allow source maps & SSE from CDNs + self
+      // Allow source maps & SSE from CDNs + self + OSM routing API
       connectSrc: [
         "'self'",
         "https://unpkg.com",
         "https://cdnjs.cloudflare.com",
         "https://cdn.jsdelivr.net",
         "https://cdn.redoc.ly",
-        "https://fonts.googleapis.com"
+        "https://fonts.googleapis.com",
+        "https://router.project-osrm.org",
+        "https://nominatim.openstreetmap.org"
       ],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       objectSrc: ["'none'"],

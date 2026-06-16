@@ -109,6 +109,11 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="anonymous"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="anonymous"/>
+  
+  <!-- Leaflet Routing Machine & Geocoder -->
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" crossorigin="anonymous"/>
+
   <!-- Font Awesome 6 Free -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous"/>
   <!-- Google Fonts -->
@@ -299,6 +304,9 @@
     </button>
     <button class="map-ctrl-btn" id="ctrl-myloc" title="Tampilkan lokasi saya" aria-label="Tampilkan posisi saya di peta">
       <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+    </button>
+    <button class="map-ctrl-btn" id="ctrl-safe-route" title="Cari Rute Aman" aria-label="Cari Rute Navigasi Aman">
+      <i class="fa-solid fa-route" aria-hidden="true"></i>
     </button>
   </div>
 
@@ -826,20 +834,95 @@
   </div>
 </div>
 
-<!-- ─── AI INSIGHT MODAL ─────────────────────────────────────────────────── -->
-<div class="modal-overlay" id="ai-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title" hidden>
-  <div class="modal glass tips-modal" id="ai-modal" tabindex="-1">
+<!-- ─── SAFE ROUTE MODAL ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="route-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="route-modal-title" hidden>
+  <div class="modal glass" id="route-modal" tabindex="-1">
     <div class="modal-header">
-      <h2 class="modal-title" id="ai-modal-title">
-        <i class="fa-solid fa-brain" style="color: #c084fc;" aria-hidden="true"></i> Analisis AI Pintar
+      <h2 class="modal-title" id="route-modal-title">
+        <i class="fa-solid fa-route" style="color: #3b82f6;" aria-hidden="true"></i> Navigasi Rute Aman
       </h2>
-      <button class="modal-close" id="ai-modal-close" aria-label="Tutup analisis AI">
+      <button class="modal-close" id="route-modal-close" aria-label="Tutup modal rute">
         <i class="fa-solid fa-xmark" aria-hidden="true"></i>
       </button>
     </div>
-    <div class="modal-body">
-      <div id="ai-content" class="ai-content" aria-live="polite">
-        <!-- Content injected by JS -->
+    
+    <div style="padding: 22px;">
+      <div class="modal-tip" style="margin: 0 0 16px 0;">
+        <i class="fa-solid fa-lightbulb"></i>
+        Masukkan koordinat awal dan tujuan Anda. Anda bisa mengetik langsung, menggunakan GPS, atau mengklik titik di peta.
+      </div>
+
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label>
+          <i class="fa-solid fa-map-pin" style="color: #4ade80;"></i>
+          Titik Awal <span class="required">*</span>
+        </label>
+        <div class="loc-group" style="margin-bottom: 8px;">
+          <input type="text" id="route-start-search" placeholder="Cari nama jalan atau tempat (contoh: Monas)" style="flex: 1; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white;">
+          <button type="button" class="btn-gps" id="btn-search-start" title="Cari lokasi" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3);">
+            <i class="fa-solid fa-search"></i> Cari
+          </button>
+        </div>
+        <div class="loc-group">
+          <input type="text" id="route-start-input" placeholder="Koordinat: -6.200, 106.816" style="flex: 1; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #aaa;" readonly>
+          <button type="button" class="btn-gps" id="btn-route-start-gps" title="Gunakan lokasi saya">
+            <i class="fa-solid fa-location-crosshairs"></i> GPS
+          </button>
+          <button type="button" class="btn-gps" id="btn-route-start-map" title="Pilih di peta" style="background: rgba(168, 85, 247, 0.12); color: #c084fc; border-color: rgba(168, 85, 247, 0.3);">
+            <i class="fa-solid fa-map"></i> Peta
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label>
+          <i class="fa-solid fa-location-dot" style="color: #ef4444;"></i>
+          Titik Akhir <span class="required">*</span>
+        </label>
+        <div class="loc-group" style="margin-bottom: 8px;">
+          <input type="text" id="route-end-search" placeholder="Cari nama jalan atau tempat tujuan" style="flex: 1; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white;">
+          <button type="button" class="btn-gps" id="btn-search-end" title="Cari lokasi" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3);">
+            <i class="fa-solid fa-search"></i> Cari
+          </button>
+        </div>
+        <div class="loc-group">
+          <input type="text" id="route-end-input" placeholder="Koordinat: -6.200, 106.816" style="flex: 1; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.4); border: 1px solid var(--border); color: #aaa;" readonly>
+          <button type="button" class="btn-gps" id="btn-route-end-map" title="Pilih di peta" style="background: rgba(168, 85, 247, 0.12); color: #c084fc; border-color: rgba(168, 85, 247, 0.3);">
+            <i class="fa-solid fa-map"></i> Peta
+          </button>
+        </div>
+      </div>
+
+      <button type="button" class="btn-submit" id="btn-start-route" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);">
+        <i class="fa-solid fa-compass"></i> Cari Rute Aman
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── AI CHAT MODAL ─────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="ai-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title" hidden>
+  <div class="modal glass tips-modal" id="ai-modal" tabindex="-1" style="max-width: 450px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="ai-modal-title">
+        <i class="fa-solid fa-robot" style="color: #c084fc;" aria-hidden="true"></i> Tanya AI Safety Assistant
+      </h2>
+      <button class="modal-close" id="ai-modal-close" aria-label="Tutup AI Chat">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal-body" style="padding: 0;">
+      <div id="ai-chat-messages" style="height: 300px; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="background: rgba(192, 132, 252, 0.15); border: 1px solid rgba(192, 132, 252, 0.3); padding: 12px; border-radius: 8px; align-self: flex-start; max-width: 85%;">
+          <strong style="color: #c084fc;"><i class="fa-solid fa-robot"></i> AI Navara:</strong><br>
+          Halo! Saya adalah Asisten Keamanan NAVARA. Ada yang bisa saya bantu terkait rute atau keamanan area tertentu?
+        </div>
+      </div>
+      <div style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 8px;">
+        <input type="text" id="ai-chat-input" placeholder="Tanya tentang jalan..." style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;" aria-label="Pesan Chat">
+        <button id="btn-send-ai" style="padding: 10px 16px; background: #c084fc; color: white; border: none; border-radius: 6px; cursor: pointer;" aria-label="Kirim Pesan">
+          <i class="fa-solid fa-paper-plane"></i>
+        </button>
       </div>
     </div>
   </div>
@@ -872,6 +955,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" integrity="sha384-mFKkGiGvT5vo1fEyGCD3hshDdKmW3wzXW/x+fWriYJArD0R3gawT6lMvLboM22c0" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js" crossorigin="anonymous"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" integrity="sha384-nLoOnA/BDh8A/jxqtckg4DumuCGOBYUnNJLZdQz/zfYNp3wcjGSoWTAzgko06G/2" crossorigin="anonymous"></script>
 <script src="/js/app.js"></script>
