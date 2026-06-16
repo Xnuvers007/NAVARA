@@ -677,7 +677,10 @@ function resetLocationFields() {
   });
   document.getElementById('loc-dot-start').classList.remove('active');
   document.getElementById('loc-dot-end').classList.remove('active');
-  document.getElementById('loc-text-start').textContent = 'Belum ada lokasi dipilih';
+  const locTextStart = document.getElementById('loc-text-start');
+  if (locTextStart) locTextStart.textContent = 'Belum ada lokasi dipilih';
+  const manualCoord = document.getElementById('manual-coord');
+  if (manualCoord) manualCoord.value = '';
   document.getElementById('loc-text-end').textContent = 'Titik akhir rute belum dipilih';
   document.getElementById('location-indicator').classList.remove('has-start');
 }
