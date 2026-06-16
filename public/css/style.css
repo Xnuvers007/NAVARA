@@ -980,6 +980,7 @@ label i { font-size: 11px; }
   box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
 }
 .form-group select option { background: var(--bg-surface); color: var(--text-primary); }
+.form-group select optgroup { background: var(--bg-surface); color: var(--text-muted); font-size: 11px; font-style: normal; font-weight: 700; letter-spacing: 0.04em; }
 .form-group textarea { resize: vertical; min-height: 80px; }
 .char-count { font-size: 10.5px; color: var(--text-muted); text-align: right; }
 .field-error { font-size: 11.5px; color: var(--accent-light); min-height: 16px; }

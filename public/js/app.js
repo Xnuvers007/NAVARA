@@ -65,6 +65,7 @@ let captchaToken = '';
 let votedReports = new Set(LS.get('ba_voted', []));
 let deferredInstallPrompt = null;
 let sseConn = null;
+let sseVisibilityListenerAdded = false;
 let panelCollapsed = false;
 let panelExpanded = false;
 
@@ -418,7 +419,8 @@ function initEventListeners() {
       if (parts.length >= 2) {
         const lat = parseFloat(parts[0].trim());
         const lng = parseFloat(parts[1].trim());
-        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        // Validasi sesuai batas Indonesia (sama dengan backend)
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -11.5 && lat <= 6.5 && lng >= 94.0 && lng <= 141.5) {
           setStartPoint(lat, lng, false);
           map.setView([lat, lng], 14);
         }
@@ -434,7 +436,8 @@ function initEventListeners() {
       if (parts.length >= 2) {
         const lat = parseFloat(parts[0].trim());
         const lng = parseFloat(parts[1].trim());
-        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        // Validasi sesuai batas Indonesia (sama dengan backend)
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -11.5 && lat <= 6.5 && lng >= 94.0 && lng <= 141.5) {
           setEndPoint(lat, lng, false);
           map.setView([lat, lng], 14);
         }
@@ -1214,9 +1217,31 @@ function initSSE() {
       const rtDot = document.getElementById('rt-dot');
       const rtCount = document.getElementById('rt-count');
       if (rtStatus) rtStatus.textContent = 'Terputus...';
-      if (rtDot) rtDot.style.background = '#ef4444'; // red
+      if (rtDot) rtDot.style.background = '#ef4444';
       if (rtCount) rtCount.classList.add('hidden');
+
+      // Jika koneksi benar-benar mati (bukan hanya retry), reconnect manual
+      if (sseConn.readyState === EventSource.CLOSED) {
+        setTimeout(() => {
+          console.log('🔄 SSE reconnecting...');
+          initSSE();
+        }, 5000);
+      }
     });
+
+    // Saat tab kembali aktif, muat ulang data agar tetap segar (hanya daftarkan sekali)
+    if (!sseVisibilityListenerAdded) {
+      sseVisibilityListenerAdded = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          loadReports();
+          loadStats();
+          if (sseConn.readyState === EventSource.CLOSED) {
+            initSSE();
+          }
+        }
+      });
+    }
 
     sseConn.addEventListener('init', (e) => {
       const data = JSON.parse(e.data);
@@ -1228,10 +1253,15 @@ function initSSE() {
 
     sseConn.addEventListener('delete-report', (e) => {
       const data = JSON.parse(e.data);
+      // Tutup popup dulu jika sedang terbuka sebelum marker dihancurkan
+      const markerObj = activeMarkers.get(data.reportId);
+      if (markerObj && markerObj.marker._popup && markerObj.marker._popup.isOpen()) {
+        map.closePopup();
+      }
       allReports = allReports.filter(r => r.id !== data.reportId);
       renderMarkers();
-      showToast('Sebuah laporan telah dihapus oleh Admin.', 'info');
-      announceToSR('Laporan dihapus oleh admin.');
+      showToast('Sebuah laporan telah dihapus.', 'info');
+      announceToSR('Laporan dihapus.');
       loadStats();
     });
 
@@ -1239,8 +1269,13 @@ function initSSE() {
     sseConn.addEventListener('new-report', (e) => {
       const report = JSON.parse(e.data);
       allReports.unshift(report);
-      addMarker(report);
-      updateHeatLayer();
+      // Hanya tampilkan marker jika cocok dengan filter yang sedang aktif
+      const matchCat = selectedCategory === 'all' || report.category === selectedCategory;
+      const matchWaktu = selectedWaktu === 'all' || report.waktu === selectedWaktu;
+      if (matchCat && matchWaktu) {
+        addMarker(report);
+        updateHeatLayer();
+      }
       showToast('Laporan baru ditambahkan!', 'success');
       announceToSR('Laporan baru ditambahkan di peta.');
       loadStats();
@@ -1276,7 +1311,21 @@ function initSSE() {
       const report = allReports.find(r => r.id === data.reportId);
       if (report) {
         report.status = data.status;
+
+        // Simpan status popup sebelum marker dihancurkan
+        const markerObjBefore = activeMarkers.get(data.reportId);
+        const wasPopupOpen = markerObjBefore && markerObjBefore.marker._popup && markerObjBefore.marker._popup.isOpen();
+
         renderMarkers();
+
+        // Buka kembali popup jika sebelumnya sedang dibaca
+        if (wasPopupOpen) {
+          const markerObjAfter = activeMarkers.get(data.reportId);
+          if (markerObjAfter) {
+            setTimeout(() => markerObjAfter.marker.openPopup(), 100);
+          }
+        }
+
         if (data.status === 'aman') {
           showToast('Status sebuah jalan telah diperbarui menjadi Aman!', 'success');
           announceToSR('Status jalan diperbarui menjadi Aman.');
@@ -1421,7 +1470,7 @@ function addMarker(report, bulk = false) {
       </div>
       ${hasVoted ? '<p class="voted-note" aria-label="Anda sudah memberikan vote">Anda sudah memberi vote</p>' : ''}
       
-      <button type="button" onclick="shareToWA('${report.id}')" aria-label="Share ke WhatsApp Polisi" style="width: 100%; margin-top: 10px; padding: 8px; background: #25D366; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif;">
+      <button type="button" id="btn-share-wa-${report.id}" aria-label="Share ke WhatsApp Polisi" style="width: 100%; margin-top: 10px; padding: 8px; background: #25D366; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif;">
         <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Bagikan ke WA Polisi
       </button>
       
@@ -1462,6 +1511,7 @@ function addMarker(report, bulk = false) {
       const btnDanger = div.querySelector(`#btn-mark-danger-${report.id}`);
       const btnDefault = div.querySelector(`#btn-mark-default-${report.id}`);
       const btnAdminDel = div.querySelector(`#btn-admin-delete-${report.id}`);
+      const btnShareWA = div.querySelector(`#btn-share-wa-${report.id}`);
       const input = div.querySelector(`#input-comment-${report.id}`);
 
       btnSend?.addEventListener('click', () => submitComment(report.id, input.value, null));
@@ -1469,6 +1519,7 @@ function addMarker(report, bulk = false) {
       btnDanger?.addEventListener('click', () => submitComment(report.id, input.value, 'bahaya'));
       btnDefault?.addEventListener('click', () => submitComment(report.id, input.value, 'default'));
       btnAdminDel?.addEventListener('click', () => deleteReportAdmin(report.id));
+      btnShareWA?.addEventListener('click', () => shareToWA(report.id));
       
       input?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') btnSend.click();
@@ -1498,7 +1549,7 @@ function addMarker(report, bulk = false) {
   return marker;
 }
 
-// Fitur 7: Ekspor Laporan Otomatis ke WhatsApp Polsek
+// Fitur 7: Ekspor Laporan Otomatis ke WhatsApp Polisi
 window.shareToWA = function(id) {
   const report = allReports.find(r => r.id === id);
   if (!report) return;
@@ -1514,8 +1565,47 @@ window.shareToWA = function(id) {
   const text = `🚨 *LAPORAN DARURAT NAVARA* 🚨\n\n*Jenis Kejadian:* ${cfg.label}\n*Waktu:* ${w.label}\n*Lokasi (Kota):* ${report.kota}\n*Koordinat:* \n${mapLink}\n\n*Deskripsi Kejadian:*\n"${report.description}"\n\n_Dimohon bantuan segera dari petugas yang berwenang._`;
   
   const encodedText = encodeURIComponent(text);
-  const waUrl = `https://wa.me/?text=${encodedText}`;
-  window.open(waUrl, '_blank');
+
+  // Daftar nomor WA resmi kepolisian Indonesia
+  const contacts = [
+    { label: '🚔 Bareskrim Polri (Reserse)',      number: '6281218899191' },
+    { label: '🛡️ Divisi Propam (Lapor Polisi Nakal)', number: '6285555554141' },
+    { label: '🗣️ Divisi Humas (Premanisme)',       number: '6289682333678' },
+    { label: '🚨 Polda Metro Jaya',                number: '6282177606060' },
+    { label: '🆘 SAPA 129 (Kekerasan Perempuan/Anak)', number: '628111129129' },
+  ];
+
+  Swal.fire({
+    title: '📲 Pilih Kontak Polisi',
+    html: `
+      <p style="font-size:13px;color:#8b949e;margin-bottom:14px;">Laporan akan langsung dikirim ke WhatsApp resmi. Pilih unit yang paling sesuai:</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${contacts.map((c, i) => `
+          <button class="wa-contact-btn" data-index="${i}"
+            style="width:100%;padding:10px 14px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.3);border-radius:8px;color:#86efac;font-size:13px;font-weight:600;cursor:pointer;text-align:left;font-family:'Inter',sans-serif;transition:background 0.2s;">
+            ${c.label}<br><small style="font-weight:400;color:#6b7280;">+${c.number}</small>
+          </button>`).join('')}
+      </div>
+    `,
+    background: '#161b22',
+    color: '#c9d1d9',
+    showConfirmButton: false,
+    showCloseButton: true,
+    width: 420,
+    didOpen: (popup) => {
+      // Pasang semua listener di sini — tanpa satu pun inline handler
+      popup.querySelectorAll('.wa-contact-btn').forEach(btn => {
+        const idx = parseInt(btn.dataset.index, 10);
+        const { number } = contacts[idx];
+        btn.addEventListener('click', () => {
+          window.open(`https://wa.me/${number}?text=${encodedText}`, '_blank');
+          Swal.close();
+        });
+        btn.addEventListener('mouseover', () => { btn.style.background = 'rgba(37,211,102,0.22)'; });
+        btn.addEventListener('mouseout',  () => { btn.style.background = 'rgba(37,211,102,0.12)'; });
+      });
+    }
+  });
 };
 
 /* ─── AI INSIGHT ──────────────────────────────────────────────────────────── */
@@ -1755,10 +1845,11 @@ async function deleteReportAdmin(reportId) {
     const data = await res.json();
     if (data.success) {
       showToast('Laporan berhasil dihapus!', 'success');
-      const marker = activeMarkers.get(reportId);
-      if (marker && marker._popup && marker._popup.isOpen()) {
-        map.closePopup(marker._popup);
-      }
+      // Tutup popup dan bersihkan marker secara lokal
+      map.closePopup();
+      allReports = allReports.filter(r => r.id !== reportId);
+      renderMarkers();
+      loadStats();
     } else {
       showToast(data.message || 'Gagal menghapus laporan.', 'error');
     }

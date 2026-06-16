@@ -102,7 +102,7 @@ function startAutoCleanup() {
     try {
       const dbInstance = getDB();
       dbInstance.run(`UPDATE reports SET is_active = 0 WHERE downvotes > 10 AND is_active = 1`);
-      dbInstance.run(`DELETE FROM reports WHERE datetime(created_at) < datetime('now', '-30 days')`);
+      dbInstance.run(`DELETE FROM reports WHERE created_at < datetime('now', '-30 days', 'localtime')`);
       saveDB();
       console.log('🧹 Auto cleanup selesai');
     } catch (e) { /* silent */ }

@@ -51,7 +51,7 @@ router.get('/stream', (req, res) => {
   res.flushHeaders();
 
   // Kirim event koneksi awal
-  res.write(`event: connected\ndata: {"ts":${Date.now()},"clients":${sseClients.size + 1}}\n\n`);
+  res.write(`event: init\ndata: {"ts":${Date.now()},"activeClients":${sseClients.size + 1}}\n\n`);
 
   sseClients.add(res);
 
@@ -71,21 +71,30 @@ router.get('/stream', (req, res) => {
 router.get('/stats', (req, res) => {
   try {
     const db = getDB();
-    const total = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active = 1`);
+
+    // 1 query untuk semua hitungan waktu (total, hari ini, minggu ini, bulan ini)
+    // Menggantikan 4 query terpisah sebelumnya → lebih efisien 4x
+    const counts = dbAll(db, `
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN created_at >= date('now','localtime') THEN 1 ELSE 0 END) AS today,
+        SUM(CASE WHEN created_at > datetime('now','-7 days','localtime') THEN 1 ELSE 0 END) AS thisWeek,
+        SUM(CASE WHEN created_at > datetime('now','-30 days','localtime') THEN 1 ELSE 0 END) AS thisMonth
+      FROM reports WHERE is_active = 1
+    `);
+
     const byCategory = dbAll(db, `SELECT category, COUNT(*) as count FROM reports WHERE is_active=1 GROUP BY category ORDER BY count DESC`);
     const byKota = dbAll(db, `SELECT kota, COUNT(*) as count FROM reports WHERE is_active=1 GROUP BY kota ORDER BY count DESC LIMIT 10`);
-    const today = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active=1 AND created_at >= date('now','localtime')`);
-    const thisWeek = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active=1 AND created_at > datetime('now','-7 days','localtime')`);
-    const thisMonth = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active=1 AND created_at > datetime('now','-30 days','localtime')`);
     const byWaktu = dbAll(db, `SELECT waktu, COUNT(*) as count FROM reports WHERE is_active=1 GROUP BY waktu ORDER BY count DESC`);
 
+    const c = counts[0];
     return res.json({
       success: true,
       data: {
-        total: total[0].count,
-        today: today[0].count,
-        thisWeek: thisWeek[0].count,
-        thisMonth: thisMonth[0].count,
+        total: c.total,
+        today: c.today,
+        thisWeek: c.thisWeek,
+        thisMonth: c.thisMonth,
         activeClients: sseClients.size,
         byCategory, byWaktu,
         topKota: byKota
@@ -375,63 +384,56 @@ router.delete('/:id',
 router.post('/chat', commentLimiter, sanitizeBody, (req, res) => {
   try {
     const { message } = req.body;
-    if (!message || typeof message !== 'string') {
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'Pesan tidak valid' });
+    }
+    if (message.length > 300) {
+      return res.status(400).json({ success: false, message: 'Pesan terlalu panjang (maks 300 karakter)' });
     }
     
     const db = getDB();
-    const reports = dbAll(db, `SELECT * FROM reports WHERE is_active=1 ORDER BY created_at DESC`);
+    // Hanya ambil kolom yang dibutuhkan AI (bukan SELECT * yang juga mengambil ip_hash)
+    const reports = dbAll(db, `SELECT id, kota, category, waktu, status FROM reports WHERE is_active=1 ORDER BY created_at DESC`);
     
     const msgLower = message.toLowerCase();
     let reply = "";
 
     // 1. Cek jika pesan mengandung sapaan
     if (/^(halo|hai|hi|pagi|siang|sore|malam|bot)/i.test(msgLower) && msgLower.length < 15) {
-      return res.json({ success: true, reply: `Halo! 👋 Saya AI Navara. Anda bisa menanyakan keamanan suatu kota, misalnya: *"Apakah Jakarta Selatan aman?"* atau *"Cek kondisi di Bogor"*.` });
+      reply = `Halo! 👋 Saya AI Navara. Anda bisa menanyakan keamanan suatu kota, misalnya: *"Apakah Jakarta Selatan aman?"* atau *"Cek kondisi di Bogor"*.`;
+    } else {
+      // 2. Gunakan Regex Global untuk mencari kecocokan Kota dari Database
+      const cities = [...new Set(reports.map(r => r.kota.toLowerCase()))];
+      
+      let matchedCities = cities.filter(c => {
+        const words = c.split(' ');
+        return words.some(w => msgLower.includes(w)) || msgLower.includes(c);
+      });
+
+      if (matchedCities.length > 0) {
+        let mentionedCity = matchedCities[0];
+        const exactMatch = matchedCities.find(c => msgLower.includes(c));
+        if (exactMatch) mentionedCity = exactMatch;
+
+        const cityReports = reports.filter(r => r.kota.toLowerCase() === mentionedCity);
+        if (cityReports.length > 0) {
+          reply = `Berdasarkan pantauan saya, di area **${mentionedCity.replace(/\b\w/g, l => l.toUpperCase())}** terdapat **${cityReports.length} laporan** kejahatan aktif. ⚠️ Laporan terbaru adalah kejadian **"${cityReports[0].category}"** pada waktu ${cityReports[0].waktu}. Harap waspada jika Anda harus melewati rute tersebut!`;
+        } else {
+          reply = `Kabar baik! Area **${mentionedCity.replace(/\b\w/g, l => l.toUpperCase())}** saat ini terpantau **aman** dari laporan kejahatan di sistem Navara. Namun ingat, tetap utamakan keselamatan dan jangan lengah.`;
+        }
+      } else if (/aman|bahaya|rawan|kondisi|info/i.test(msgLower)) {
+        if (reports.length > 0) {
+          reply = `Saat ini sistem Navara mencatat total **${reports.length} titik rawan** di berbagai daerah. 📍 Lokasi kejadian paling baru ada di **${reports[0].kota}** (Kasus: ${reports[0].category}). Saya sarankan Anda menggunakan fitur **Rute Aman** (ikon rute di kiri bawah peta) untuk mencari jalan yang terhindar dari zona merah ini.`;
+        } else {
+          reply = "Mantap! 🛡️ Saat ini database Navara bersih dari laporan kejahatan. Jalanan terpantau aman terkendali.";
+        }
+      } else {
+        reply = `Hmm, saya kurang memahami spesifik pertanyaannya. Tapi sebagai info, ada **${reports.length} laporan** aktif saat ini. Anda bisa langsung sebutkan nama daerah yang ingin Anda ketahui statusnya! (Contoh: "Apakah area Bogor aman?")`;
+      }
     }
 
-    // 2. Gunakan Regex Global untuk mencari kecocokan Kota dari Database
-    const cities = [...new Set(reports.map(r => r.kota.toLowerCase()))];
-    
-    // Cari kota yang cocok (meskipun user ngetik "jakarta", bakal match ke "Jakarta Selatan", "Jakarta Pusat" dll)
-    let matchedCities = cities.filter(c => {
-      // buat regex per kata dari kota di DB, misal "jakarta selatan"
-      // kalau user ngetik "jakarta", match.
-      const words = c.split(' ');
-      return words.some(w => msgLower.includes(w)) || msgLower.includes(c);
-    });
-
-    if (matchedCities.length > 0) {
-      // Ambil kota yang paling relevan (kita ambil index 0)
-      let mentionedCity = matchedCities[0];
-      // Jika user ngetik "jakarta selatan" secara utuh, prioritaskan itu
-      const exactMatch = matchedCities.find(c => msgLower.includes(c));
-      if (exactMatch) mentionedCity = exactMatch;
-
-      const cityReports = reports.filter(r => r.kota.toLowerCase() === mentionedCity);
-      if (cityReports.length > 0) {
-        reply = `Berdasarkan pantauan saya, di area **${mentionedCity.replace(/\b\w/g, l => l.toUpperCase())}** terdapat **${cityReports.length} laporan** kejahatan aktif. ⚠️ Laporan terbaru adalah kejadian **"${cityReports[0].category}"** pada waktu ${cityReports[0].waktu}. Harap waspada jika Anda harus melewati rute tersebut!`;
-      } else {
-        reply = `Kabar baik! Area **${mentionedCity.replace(/\b\w/g, l => l.toUpperCase())}** saat ini terpantau **aman** dari laporan kejahatan di sistem Navara. Namun ingat, tetap utamakan keselamatan dan jangan lengah.`;
-      }
-    } 
-    // 3. Keyword "aman" / "bahaya" secara global
-    else if (/aman|bahaya|rawan|kondisi|info/i.test(msgLower)) {
-      if (reports.length > 0) {
-        reply = `Saat ini sistem Navara mencatat total **${reports.length} titik rawan** di berbagai daerah. 📍 Lokasi kejadian paling baru ada di **${reports[0].kota}** (Kasus: ${reports[0].category}). Saya sarankan Anda menggunakan fitur **Rute Aman** (ikon rute di kiri bawah peta) untuk mencari jalan yang terhindar dari zona merah ini.`;
-      } else {
-        reply = "Mantap! 🛡️ Saat ini database Navara bersih dari laporan kejahatan. Jalanan terpantau aman terkendali.";
-      }
-    } 
-    // 4. Default Fallback
-    else {
-      reply = `Hmm, saya kurang memahami spesifik pertanyaannya. Tapi sebagai info, ada **${reports.length} laporan** aktif saat ini. Anda bisa langsung sebutkan nama daerah yang ingin Anda ketahui statusnya! (Contoh: "Apakah area Bogor aman?")`;
-    }
-
-    // Simulasi delay ketikan AI
-    setTimeout(() => {
-      return res.json({ success: true, reply });
-    }, 800);
+    // Simulasi delay ketikan AI (tanpa return di dalam setTimeout untuk menghindari crash)
+    setTimeout(() => res.json({ success: true, reply }), 800);
 
   } catch (err) {
     console.error('POST /chat error:', err.message);

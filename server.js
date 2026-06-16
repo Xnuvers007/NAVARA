@@ -31,8 +31,8 @@ app.use(helmet(helmetConfig));
 // ─── CORS — hanya izinkan same-origin (deploy lokal) ─────────────────────────
 app.use(cors({
   origin: process.env.ALLOWED_ORIGIN || `http://localhost:${PORT}`,
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
+  methods: ['GET', 'POST', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'x-csrf-token', 'x-admin-key', 'x-captcha-token'],
   credentials: false
 }));
 
