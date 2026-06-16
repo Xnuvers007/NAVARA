@@ -77,9 +77,9 @@ router.get('/stats', (req, res) => {
     const counts = dbAll(db, `
       SELECT
         COUNT(*) AS total,
-        SUM(CASE WHEN created_at >= date('now','localtime') THEN 1 ELSE 0 END) AS today,
-        SUM(CASE WHEN created_at > datetime('now','-7 days','localtime') THEN 1 ELSE 0 END) AS thisWeek,
-        SUM(CASE WHEN created_at > datetime('now','-30 days','localtime') THEN 1 ELSE 0 END) AS thisMonth
+        COALESCE(SUM(CASE WHEN created_at >= date('now','localtime') THEN 1 ELSE 0 END), 0) AS today,
+        COALESCE(SUM(CASE WHEN created_at > datetime('now','-7 days','localtime') THEN 1 ELSE 0 END), 0) AS thisWeek,
+        COALESCE(SUM(CASE WHEN created_at > datetime('now','-30 days','localtime') THEN 1 ELSE 0 END), 0) AS thisMonth
       FROM reports WHERE is_active = 1
     `);
 
