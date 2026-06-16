@@ -6,11 +6,11 @@ const path = require('path');
 const fs = require('fs');
 const initSqlJs = require('sql.js');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'navara.sqlite');
+const DB_PATH = process.env.VERCEL ? path.join('/tmp', 'navara.sqlite') : path.join(__dirname, '..', 'data', 'navara.sqlite');
 let db = null;
 
 async function initDB() {
-  const dataDir = path.join(__dirname, '..', 'data');
+  const dataDir = process.env.VERCEL ? '/tmp' : path.join(__dirname, '..', 'data');
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
   const SQL = await initSqlJs();
