@@ -4,7 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { getDB, saveDB } = require('../db/database');
 const {
   reportLimiter, voteLimiter, commentLimiter, sanitizeBody,
@@ -143,8 +143,8 @@ router.get('/', validateGetReports, handleValidationErrors, (req, res) => {
       rows = rows.filter(row => {
         const dL = toRad(row.latitude - uLat);
         const dG = toRad(row.longitude - uLng);
-        const a = Math.sin(dL/2)**2 + Math.cos(toRad(uLat))*Math.cos(toRad(row.latitude))*Math.sin(dG/2)**2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)) <= r;
+        const a = Math.sin(dL / 2) ** 2 + Math.cos(toRad(uLat)) * Math.cos(toRad(row.latitude)) * Math.sin(dG / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) <= r;
       });
     }
 
@@ -165,7 +165,7 @@ router.post('/',
       const { latitude, longitude, lat_end, lng_end, category, description, waktu, kota } = req.body;
       const ip = req.ip || req.socket.remoteAddress || '';
       const ipHash = hashIP(ip);
-      const id = uuidv4();
+      const id = crypto.randomUUID();
 
       // Anti-duplikat: koordinat sama, IP sama, dalam 10 menit
       const dup = dbAll(db, `
@@ -293,7 +293,7 @@ router.post('/:id/comments',
         else if (status_update === 'default') statusText = 'Direset (Default)';
         comment = `Status diperbarui menjadi ${statusText}`;
       }
-      
+
       if (!comment && !status_update) {
         return res.status(400).json({ success: false, message: 'Komentar tidak boleh kosong' });
       }
@@ -318,7 +318,7 @@ router.post('/:id/comments',
       saveDB();
 
       const newComment = { id: commentId, report_id: id, comment: comment || '', status_update: status_update || null, created_at: new Date().toISOString() };
-      
+
       // Broadcast komentar baru
       broadcastSSE('new-comment', newComment);
 

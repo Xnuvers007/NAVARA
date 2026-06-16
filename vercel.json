@@ -1,7 +1,9 @@
 {
   "version": 2,
   "name": "navara-app",
-  "regions": ["sin1"],
+  "regions": [
+    "sin1"
+  ],
   "builds": [
     {
       "src": "server.js",
