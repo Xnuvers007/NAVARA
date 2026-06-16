@@ -309,7 +309,8 @@ function strictOriginCheck(req, res, next) {
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
     const origin = req.headers.origin;
     const referer = req.headers.referer;
-    const allowedOrigin = process.env.ALLOWED_ORIGIN || `http://localhost:${process.env.PORT || 8080}`;
+    const allowedOrigin = process.env.ALLOWED_ORIGIN || 
+                          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT || 8080}`);
 
     // Memastikan Origin atau Referer valid (sama dengan allowedOrigin)
     // Jika origin tidak ada, kita bisa menggunakan referer
