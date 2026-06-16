@@ -1258,10 +1258,10 @@ function initSSE() {
       const elDn = document.getElementById(`dn-${data.reportId}`);
       if (elDn) elDn.textContent = data.downvotes;
       
-      const marker = activeMarkers.get(data.reportId);
-      if (marker._popup && marker._popup.isOpen()) {
-        marker.closePopup();
-        setTimeout(() => marker.openPopup(), 100);
+      const markerObj = activeMarkers.get(data.reportId);
+      if (markerObj && markerObj.marker._popup && markerObj.marker._popup.isOpen()) {
+        markerObj.marker.closePopup();
+        setTimeout(() => markerObj.marker.openPopup(), 100);
       }
       loadStats();
     });
@@ -1307,11 +1307,16 @@ function renderMarkers() {
     return true;
   });
 
-  filtered.forEach(r => addMarker(r));
+  const markersToAdd = [];
+  filtered.forEach(r => {
+    const m = addMarker(r, true);
+    if (m) markersToAdd.push(m);
+  });
 
   if (mapMode === 'heat') {
     renderHeatmap(filtered);
-    clusterLayer.clearLayers();
+  } else if (markersToAdd.length > 0) {
+    clusterLayer.addLayers(markersToAdd);
   }
 }
 
@@ -1344,9 +1349,9 @@ function updateHeatLayer() {
 }
 
 /* ─── ADD MARKER ──────────────────────────────────────────────────────────── */
-function addMarker(report) {
-  if (activeMarkers.has(report.id)) return;
-  if (mapMode === 'heat') return;
+function addMarker(report, bulk = false) {
+  if (activeMarkers.has(report.id)) return null;
+  if (mapMode === 'heat') return null;
 
   const cfg = CAT[report.category] || CAT.lainnya;
   const hasVoted = votedReports.has(report.id);
@@ -1486,8 +1491,11 @@ function addMarker(report) {
     polyline.on('click', () => marker.openPopup());
   }
 
-  clusterLayer.addLayer(marker);
   activeMarkers.set(report.id, { marker, polyline });
+  if (!bulk) {
+    clusterLayer.addLayer(marker);
+  }
+  return marker;
 }
 
 // Fitur 7: Ekspor Laporan Otomatis ke WhatsApp Polsek

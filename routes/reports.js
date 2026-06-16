@@ -74,9 +74,9 @@ router.get('/stats', (req, res) => {
     const total = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active = 1`);
     const byCategory = dbAll(db, `SELECT category, COUNT(*) as count FROM reports WHERE is_active=1 GROUP BY category ORDER BY count DESC`);
     const byKota = dbAll(db, `SELECT kota, COUNT(*) as count FROM reports WHERE is_active=1 GROUP BY kota ORDER BY count DESC LIMIT 10`);
-    const today = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active=1 AND date(created_at)=date('now','localtime')`);
-    const thisWeek = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active=1 AND datetime(created_at)>datetime('now','-7 days')`);
-    const thisMonth = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active=1 AND datetime(created_at)>datetime('now','-30 days')`);
+    const today = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active=1 AND created_at >= date('now','localtime')`);
+    const thisWeek = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active=1 AND created_at > datetime('now','-7 days','localtime')`);
+    const thisMonth = dbAll(db, `SELECT COUNT(*) as count FROM reports WHERE is_active=1 AND created_at > datetime('now','-30 days','localtime')`);
     const byWaktu = dbAll(db, `SELECT waktu, COUNT(*) as count FROM reports WHERE is_active=1 GROUP BY waktu ORDER BY count DESC`);
 
     return res.json({
@@ -129,11 +129,11 @@ router.get('/', validateGetReports, handleValidationErrors, (req, res) => {
 
     // Filter tanggal
     if (date_filter === 'today') {
-      sql += ` AND date(created_at) = date('now','localtime')`;
+      sql += ` AND created_at >= date('now','localtime')`;
     } else if (date_filter === 'week') {
-      sql += ` AND datetime(created_at) > datetime('now','-7 days')`;
+      sql += ` AND created_at > datetime('now','-7 days','localtime')`;
     } else if (date_filter === 'month') {
-      sql += ` AND datetime(created_at) > datetime('now','-30 days')`;
+      sql += ` AND created_at > datetime('now','-30 days','localtime')`;
     }
 
     sql += ` ORDER BY created_at DESC LIMIT ?`;
@@ -177,7 +177,7 @@ router.post('/',
       const dup = dbAll(db, `
         SELECT id FROM reports
         WHERE ip_hash=? AND ABS(latitude-?)< 0.001 AND ABS(longitude-?)<0.001
-          AND datetime(created_at)>datetime('now','-10 minutes') AND is_active=1
+          AND created_at > datetime('now','-10 minutes','localtime') AND is_active=1
         LIMIT 1
       `, [ipHash, Number(latitude), Number(longitude)]);
 
@@ -246,15 +246,22 @@ router.post('/:id/vote',
         dbRun(db, `UPDATE reports SET upvotes=upvotes+1 WHERE id=?`, [id]);
       } else {
         dbRun(db, `UPDATE reports SET downvotes=downvotes+1 WHERE id=?`, [id]);
-        dbRun(db, `UPDATE reports SET is_active=0 WHERE id=? AND downvotes>10`, [id]);
+        const updatedStats = dbAll(db, `SELECT downvotes FROM reports WHERE id=?`, [id]);
+        if (updatedStats[0] && updatedStats[0].downvotes > 10) {
+          dbRun(db, `UPDATE reports SET is_active=0 WHERE id=?`, [id]);
+          saveDB();
+          broadcastSSE('delete-report', { reportId: id });
+          return res.json({ success: true, message: 'Laporan dihapus karena banyak downvote.' });
+        }
       }
 
       saveDB();
 
       const updated = dbAll(db, `SELECT upvotes, downvotes FROM reports WHERE id=?`, [id]);
-
-      // Broadcast vote update
-      broadcastSSE('vote-update', { reportId: id, ...updated[0] });
+      if (updated.length > 0) {
+        // Broadcast vote update
+        broadcastSSE('vote-update', { reportId: id, ...updated[0] });
+      }
 
       return res.json({ success: true, message: vote === 'up' ? 'Vote positif diterima!' : 'Vote negatif diterima.', data: updated[0] });
     } catch (err) {

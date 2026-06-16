@@ -73,6 +73,9 @@ async function initDB() {
   db.run(`CREATE INDEX IF NOT EXISTS idx_reports_active ON reports(is_active, created_at DESC)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_reports_category ON reports(category, is_active)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_reports_waktu ON reports(waktu, is_active)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_reports_kota ON reports(kota, is_active)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_reports_ip ON reports(ip_hash, created_at DESC)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_comments_report ON comments(report_id, created_at ASC)`);
 
   saveDB();
   console.log('✅ Database SQLite siap digunakan di:', DB_PATH);
