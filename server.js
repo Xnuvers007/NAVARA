@@ -13,11 +13,14 @@ const crypto = require('crypto');
 const path = require('path');
 
 const { initDB, startAutoCleanup } = require('./db/database');
-const { globalLimiter, helmetConfig, preventLFI, strictOriginCheck, preventHPP, parseCookies, csrfProtection } = require('./middleware/security');
+const { globalLimiter, helmetConfig, preventLFI, strictOriginCheck, preventHPP, parseCookies, csrfProtection, generateCaptchaToken } = require('./middleware/security');
 const reportsRouter = require('./routes/reports');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+// ─── Disable X-Powered-By ─────────────────────────────────────────────────────
+app.disable('x-powered-by');
 
 // ─── Trust proxy (untuk rate limit di balik nginx/reverse proxy) ──────────────
 app.set('trust proxy', 1);
@@ -59,6 +62,15 @@ app.get('/api/csrf-token', (req, res) => {
     path: '/'
   });
   res.json({ success: true, token });
+});
+
+// ─── Captcha Endpoint ─────────────────────────────────────────────────────────
+app.get('/api/captcha', (req, res) => {
+  const num1 = Math.floor(Math.random() * 10) + 1;
+  const num2 = Math.floor(Math.random() * 10) + 1;
+  const answer = num1 + num2;
+  const token = generateCaptchaToken(answer);
+  res.json({ success: true, num1, num2, token });
 });
 
 // ─── Rate Limiter Global ──────────────────────────────────────────────────────

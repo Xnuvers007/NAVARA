@@ -59,11 +59,34 @@ let pendingLatEnd = null, pendingLngEnd = null;
 let tempMarkers = [];
 let tempLine = null;
 let csrfToken = '';
+let captchaToken = '';
 let votedReports = new Set(LS.get('ba_voted', []));
 let deferredInstallPrompt = null;
 let sseConn = null;
 let panelCollapsed = false;
 let panelExpanded = false;
+
+/* ─── Captcha ─────────────────────────────────────────────────────────────── */
+async function loadCaptcha() {
+  const qEl = document.getElementById('captcha-question');
+  const inEl = document.getElementById('field-captcha');
+  if (qEl) qEl.textContent = 'Memuat...';
+  if (inEl) inEl.value = '';
+  captchaToken = '';
+  try {
+    const res = await fetch('/api/captcha');
+    const data = await res.json();
+    if (data.success) {
+      if (qEl) qEl.textContent = `${data.num1} + ${data.num2}`;
+      captchaToken = data.token;
+    } else {
+      if (qEl) qEl.textContent = 'Gagal';
+    }
+  } catch (err) {
+    if (qEl) qEl.textContent = 'Error';
+    console.error('Gagal mengambil captcha:', err);
+  }
+}
 
 /* ─── CSRF Token ──────────────────────────────────────────────────────────── */
 async function fetchCsrfToken() {
@@ -81,6 +104,7 @@ async function fetchCsrfToken() {
 /* ─── INIT ────────────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
   await fetchCsrfToken();
+  document.getElementById('btn-refresh-captcha')?.addEventListener('click', loadCaptcha);
   initPWA();
   initMap();
   initSSE();
@@ -183,7 +207,7 @@ function initTipsModal() {
   // Keyboard: Escape
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      if (document.getElementById('tips-overlay').classList.contains('open')) {
+      if (document.getElementById('tips-overlay')?.classList.contains('open')) {
         closeTipsModal();
       }
     }
@@ -193,6 +217,7 @@ function initTipsModal() {
 function openTipsModal() {
   const overlay = document.getElementById('tips-overlay');
   const modal = document.getElementById('tips-modal');
+  if (!overlay) return;
   overlay.classList.add('open');
   overlay.removeAttribute('hidden');
   // Focus first focusable element
@@ -205,6 +230,7 @@ function openTipsModal() {
 
 function closeTipsModal() {
   const overlay = document.getElementById('tips-overlay');
+  if (!overlay) return;
   overlay.classList.remove('open');
   if (tipsReleaseFocus) { tipsReleaseFocus(); tipsReleaseFocus = null; }
   // Return focus to trigger
@@ -235,60 +261,12 @@ function switchTipsTab(tabKey) {
   announceToSR(tabLabels[tabKey] || 'Tips dibuka', false);
 }
 
-/* ─── SSE REAL-TIME ───────────────────────────────────────────────────────── */
-function initSSE() {
-  if (sseConn) { sseConn.close(); }
-  const rtDot = document.getElementById('rt-dot');
-  const rtStatus = document.getElementById('rt-status');
-  const rtCount = document.getElementById('rt-count');
-
-  try {
-    sseConn = new EventSource('/api/reports/stream');
-
-    sseConn.addEventListener('connected', (e) => {
-      const d = JSON.parse(e.data);
-      rtDot.className = 'rt-dot connected';
-      rtStatus.textContent = 'Real-time aktif';
-      rtCount.textContent = `${d.clients} online`;
-      rtCount.classList.remove('hidden');
-      announceToSR(`Terhubung ke Begal Alert. ${d.clients} pengguna online.`);
-    });
-
-    sseConn.addEventListener('new-report', (e) => {
-      const report = JSON.parse(e.data);
-      if (!allReports.find(r => r.id === report.id)) {
-        allReports.unshift(report);
-        addMarker(report);
-        loadStats();
-        const msg = `Laporan baru: ${CAT[report.category]?.label || 'Kejadian'} di ${report.kota}`;
-        showToast(msg, 'info');
-        announceToSR(msg, true);
-      }
-    });
-
-    sseConn.addEventListener('vote-update', (e) => {
-      const { reportId, upvotes, downvotes } = JSON.parse(e.data);
-      const upEl = document.getElementById(`up-${reportId}`);
-      const dnEl = document.getElementById(`dn-${reportId}`);
-      if (upEl) upEl.textContent = upvotes;
-      if (dnEl) dnEl.textContent = downvotes;
-      const rep = allReports.find(r => r.id === reportId);
-      if (rep) { rep.upvotes = upvotes; rep.downvotes = downvotes; }
-    });
-
-    sseConn.onerror = () => {
-      rtDot.className = 'rt-dot error';
-      rtStatus.textContent = 'Koneksi terputus — mencoba ulang...';
-      rtCount.classList.add('hidden');
-      setTimeout(initSSE, 5000);
-    };
-  } catch {
-    rtStatus.textContent = 'SSE tidak tersedia';
-  }
-}
 
 /* ─── MAP ─────────────────────────────────────────────────────────────────── */
 function initMap() {
+  const mapContainer = document.getElementById('map');
+  if (!mapContainer) return;
+
   map = L.map('map', {
     center: INDONESIA_CENTER, zoom: 5, minZoom: 4, maxZoom: 18,
     maxBounds: INDONESIA_BOUNDS.pad(0.3),
@@ -296,7 +274,7 @@ function initMap() {
   });
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> | 🛡️ Begal Alert by <a href="https://github.com/Xnuvers007" target="_blank" rel="noopener">Xnuvers007</a>',
+    attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> | 🛡️ NAVARA by <a href="https://github.com/Xnuvers007" target="_blank" rel="noopener">Xnuvers007</a>',
     maxZoom: 19, crossOrigin: true
   }).addTo(map);
 
@@ -355,16 +333,47 @@ function onMapClick(e) {
 
 /* ─── EVENT LISTENERS ────────────────────────────────────────────────────── */
 function initEventListeners() {
+  // Mobile Sidebar
+  const hamburgerBtn = document.getElementById('hamburger-btn');
+  const sidebarMenu = document.getElementById('sidebar-menu');
+  const sidebarOverlay = document.getElementById('sidebar-overlay');
+  const btnCloseSidebar = document.getElementById('btn-close-sidebar');
+
+  function openSidebar() {
+    sidebarMenu.classList.add('open');
+    sidebarOverlay.classList.add('open');
+    hamburgerBtn.setAttribute('aria-expanded', 'true');
+    announceToSR('Menu navigasi dibuka');
+  }
+
+  function closeSidebar() {
+    sidebarMenu.classList.remove('open');
+    sidebarOverlay.classList.remove('open');
+    hamburgerBtn.setAttribute('aria-expanded', 'false');
+    announceToSR('Menu navigasi ditutup');
+  }
+
+  hamburgerBtn?.addEventListener('click', openSidebar);
+  btnCloseSidebar?.addEventListener('click', closeSidebar);
+  sidebarOverlay?.addEventListener('click', closeSidebar);
+
+  // Close sidebar on escape key
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && sidebarMenu?.classList.contains('open')) {
+      closeSidebar();
+    }
+  });
+
   // Report modal
-  document.getElementById('btn-open-report').addEventListener('click', openModal);
-  document.getElementById('fab-report').addEventListener('click', openModal);
-  document.getElementById('modal-close').addEventListener('click', closeModal);
-  document.getElementById('modal-overlay').addEventListener('click', e => {
+  document.getElementById('btn-open-report')?.addEventListener('click', openModal);
+  document.getElementById('fab-report')?.addEventListener('click', openModal);
+  document.getElementById('modal-close')?.addEventListener('click', closeModal);
+  document.getElementById('modal-overlay')?.addEventListener('click', e => {
     if (e.target === e.currentTarget) closeModal();
   });
 
   // GPS
-  document.getElementById('btn-gps').addEventListener('click', useGPS);
+  document.getElementById('btn-gps')?.addEventListener('click', useGPS);
 
   // Manual Coordinate Input
   const manualCoord = document.getElementById('manual-coord');
@@ -385,16 +394,17 @@ function initEventListeners() {
   }
 
   // Char counter
-  document.getElementById('field-desc').addEventListener('input', e => {
+  document.getElementById('field-desc')?.addEventListener('input', e => {
     const len = e.target.value.length;
-    document.getElementById('char-count').textContent = len;
+    const charCount = document.getElementById('char-count');
+    if (charCount) charCount.textContent = len;
     if (len >= 450) {
       announceToSR(`${len} dari 500 karakter terisi.`);
     }
   });
 
   // Form
-  document.getElementById('report-form').addEventListener('submit', handleSubmit);
+  document.getElementById('report-form')?.addEventListener('submit', handleSubmit);
 
   // Mode toggle
   document.querySelectorAll('.mode-btn').forEach(btn => {
@@ -472,22 +482,22 @@ function initEventListeners() {
   });
 
   // Map mode controls
-  document.getElementById('ctrl-cluster').addEventListener('click', () => {
+  document.getElementById('ctrl-cluster')?.addEventListener('click', () => {
     setMapMode('cluster');
     announceToSR('Mode tampilan diubah ke Cluster. Laporan dikelompokkan.');
   });
-  document.getElementById('ctrl-heat').addEventListener('click', () => {
+  document.getElementById('ctrl-heat')?.addEventListener('click', () => {
     setMapMode('heat');
     announceToSR('Mode tampilan diubah ke Heatmap. Menampilkan area rawan dengan warna.');
   });
-  document.getElementById('ctrl-myloc').addEventListener('click', () => {
+  document.getElementById('ctrl-myloc')?.addEventListener('click', () => {
     showMyLocation();
     announceToSR('Mencari lokasi Anda di peta...');
   });
 
   // Stats panel toggle & expand
-  document.getElementById('btn-toggle-stats').addEventListener('click', toggleStatsPanel);
-  document.getElementById('btn-expand-stats').addEventListener('click', expandStatsPanel);
+  document.getElementById('btn-toggle-stats')?.addEventListener('click', toggleStatsPanel);
+  document.getElementById('btn-expand-stats')?.addEventListener('click', expandStatsPanel);
 
   // Filter Bar toggle
   document.getElementById('filter-bar-header')?.addEventListener('click', () => {
@@ -597,6 +607,7 @@ function openModal() {
   }, 200);
   showToast('Klik peta untuk pilih lokasi kejadian', 'info');
   announceToSR('Form laporan kejadian terbuka. Klik lokasi di peta atau gunakan tombol GPS.');
+  loadCaptcha();
 }
 
 function closeModal() {
@@ -769,6 +780,9 @@ async function handleSubmit(e) {
   if (!waktuEl) { errors.push('waktu'); document.getElementById('err-waktu').textContent = 'Pilih waktu kejadian'; }
   const description = document.getElementById('field-desc').value.trim();
   if (description.length < 10) { errors.push('desc'); document.getElementById('err-desc').textContent = 'Deskripsi minimal 10 karakter'; }
+  const captchaAnswer = document.getElementById('field-captcha')?.value.trim();
+  if (!captchaAnswer || isNaN(captchaAnswer) || captchaAnswer === '') { errors.push('captcha'); document.getElementById('err-captcha').textContent = 'Isi hasil penjumlahan'; }
+  else { document.getElementById('err-captcha').textContent = ''; }
 
   if (errors.length > 0) {
     const errorList = [];
@@ -777,6 +791,7 @@ async function handleSubmit(e) {
     if (errors.includes('kota')) errorList.push('kota belum dipilih');
     if (errors.includes('waktu')) errorList.push('waktu kejadian belum dipilih');
     if (errors.includes('desc')) errorList.push('deskripsi terlalu pendek');
+    if (errors.includes('captcha')) errorList.push('jawaban keamanan (captcha) tidak valid');
     announceToSR(`Formulir memiliki kesalahan: ${errorList.join(', ')}. Harap perbaiki.`, true);
     return;
   }
@@ -795,7 +810,7 @@ async function handleSubmit(e) {
   announceToSR('Sedang mengirim laporan...');
 
   try {
-    const payload = { latitude: pendingLat, longitude: pendingLng, category, description, waktu: waktuEl.value, kota };
+    const payload = { latitude: pendingLat, longitude: pendingLng, category, description, waktu: waktuEl.value, kota, captchaToken, captchaAnswer: Number(captchaAnswer) };
     if (locationMode === 'route' && pendingLatEnd && pendingLngEnd) {
       payload.lat_end = pendingLatEnd;
       payload.lng_end = pendingLngEnd;
@@ -826,6 +841,7 @@ async function handleSubmit(e) {
       const errMsg = data.message || 'Gagal mengirim laporan';
       showToast(errMsg, 'error');
       announceToSR(errMsg, true);
+      loadCaptcha();
     }
   } catch {
     showToast('Koneksi gagal. Periksa internet Anda.', 'error');
@@ -876,15 +892,21 @@ function initSSE() {
     sseConn = new EventSource('/api/reports/stream');
     
     sseConn.addEventListener('open', () => {
-      document.getElementById('rt-status').textContent = 'Online';
-      document.getElementById('rt-dot').style.background = '#10b981'; // green
-      document.getElementById('rt-count').classList.remove('hidden');
+      const rtStatus = document.getElementById('rt-status');
+      const rtDot = document.getElementById('rt-dot');
+      const rtCount = document.getElementById('rt-count');
+      if (rtStatus) rtStatus.textContent = 'Online';
+      if (rtDot) rtDot.style.background = '#10b981'; // green
+      if (rtCount) rtCount.classList.remove('hidden');
     });
 
     sseConn.addEventListener('error', () => {
-      document.getElementById('rt-status').textContent = 'Terputus...';
-      document.getElementById('rt-dot').style.background = '#ef4444'; // red
-      document.getElementById('rt-count').classList.add('hidden');
+      const rtStatus = document.getElementById('rt-status');
+      const rtDot = document.getElementById('rt-dot');
+      const rtCount = document.getElementById('rt-count');
+      if (rtStatus) rtStatus.textContent = 'Terputus...';
+      if (rtDot) rtDot.style.background = '#ef4444'; // red
+      if (rtCount) rtCount.classList.add('hidden');
     });
 
     sseConn.addEventListener('init', (e) => {
@@ -1092,6 +1114,7 @@ function addMarker(report) {
           <div style="text-align:center;font-size:10px;color:#8b949e">Memuat komentar...</div>
         </div>
         <div class="comment-form">
+          <label for="input-comment-${report.id}" class="sr-only">Tulis komentar atau update...</label>
           <input type="text" id="input-comment-${report.id}" class="comment-input" placeholder="Tulis komentar atau update..." aria-label="Komentar">
           <div class="comment-actions">
             <button class="btn-comment" id="btn-send-comment-${report.id}"><i class="fa-solid fa-paper-plane"></i> Kirim</button>
@@ -1194,33 +1217,44 @@ async function loadStats() {
     if (!data.success) return;
     const s = data.data;
 
-    document.getElementById('stat-total').textContent = s.total.toLocaleString('id-ID');
-    document.getElementById('stat-today').textContent = s.today.toLocaleString('id-ID');
-    document.getElementById('stat-week').textContent = s.thisWeek.toLocaleString('id-ID');
-    document.getElementById('sp-total').textContent = s.total.toLocaleString('id-ID');
-    document.getElementById('sp-today').textContent = s.today.toLocaleString('id-ID');
-    document.getElementById('sp-week').textContent = s.thisWeek.toLocaleString('id-ID');
+    const elStatTotal = document.getElementById('stat-total');
+    const elStatToday = document.getElementById('stat-today');
+    const elStatWeek  = document.getElementById('stat-week');
+    const elSpTotal   = document.getElementById('sp-total');
+    const elSpToday   = document.getElementById('sp-today');
+    const elSpWeek    = document.getElementById('sp-week');
+    const elStatsCats = document.getElementById('stats-cats');
+    const elStatsKota = document.getElementById('stats-kota');
+
+    if (elStatTotal) elStatTotal.textContent = s.total.toLocaleString('id-ID');
+    if (elStatToday) elStatToday.textContent = s.today.toLocaleString('id-ID');
+    if (elStatWeek)  elStatWeek.textContent  = s.thisWeek.toLocaleString('id-ID');
+    if (elSpTotal)   elSpTotal.textContent   = s.total.toLocaleString('id-ID');
+    if (elSpToday)   elSpToday.textContent   = s.today.toLocaleString('id-ID');
+    if (elSpWeek)    elSpWeek.textContent    = s.thisWeek.toLocaleString('id-ID');
     const clientsEl = document.getElementById('sp-clients');
     if (clientsEl) clientsEl.textContent = s.activeClients;
 
-    const maxCat = s.byCategory[0]?.count || 1;
-    document.getElementById('stats-cats').innerHTML = s.byCategory.map(cat => {
-      const cfg = CAT[cat.category] || CAT.lainnya;
-      const pct = Math.round((cat.count / maxCat) * 100);
-      return `<div class="cat-bar-item" aria-label="${cfg.label}: ${cat.count} laporan, ${pct} persen">
-        <div class="cat-bar-label">
-          <span><i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;margin-right:3px" aria-hidden="true"></i>${cfg.label}</span>
-          <span aria-hidden="true">${cat.count}</span>
-        </div>
-        <div class="cat-bar-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${pct} persen">
-          <div class="cat-bar-fill" style="width:${pct}%;background:${cfg.color}"></div>
-        </div>
-      </div>`;
-    }).join('');
+    if (elStatsCats) {
+      const maxCat = s.byCategory[0]?.count || 1;
+      elStatsCats.innerHTML = s.byCategory.map(cat => {
+        const cfg = CAT[cat.category] || CAT.lainnya;
+        const pct = Math.round((cat.count / maxCat) * 100);
+        return `<div class="cat-bar-item" aria-label="${cfg.label}: ${cat.count} laporan, ${pct} persen">
+          <div class="cat-bar-label">
+            <span><i class="fa-solid ${cfg.icon}" style="color:${cfg.color};font-size:10px;margin-right:3px" aria-hidden="true"></i>${cfg.label}</span>
+            <span aria-hidden="true">${cat.count}</span>
+          </div>
+          <div class="cat-bar-track" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="${pct} persen">
+            <div class="cat-bar-fill" style="width:${pct}%;background:${cfg.color}"></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
 
-    if (s.topKota?.length > 0) {
+    if (elStatsKota && s.topKota?.length > 0) {
       const maxK = s.topKota[0]?.count || 1;
-      document.getElementById('stats-kota').innerHTML =
+      elStatsKota.innerHTML =
         `<div style="font-size:10px;font-weight:600;color:#8b949e;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">
           <i class="fa-solid fa-city" aria-hidden="true" style="margin-right:4px"></i>Top Kota
         </div>` +

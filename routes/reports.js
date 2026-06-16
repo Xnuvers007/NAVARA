@@ -9,7 +9,8 @@ const { getDB, saveDB } = require('../db/database');
 const {
   reportLimiter, voteLimiter, commentLimiter, sanitizeBody,
   validateReport, validateVote, validateComment, validateGetReports,
-  handleValidationErrors, detectSQLInjection, hashIP, adminAuth
+  handleValidationErrors, detectSQLInjection, hashIP, adminAuth,
+  adminLimiter, verifyCaptcha
 } = require('../middleware/security');
 
 // ─── SSE Clients ──────────────────────────────────────────────────────────────
@@ -100,7 +101,12 @@ router.get('/stats', (req, res) => {
 router.get('/', validateGetReports, handleValidationErrors, (req, res) => {
   try {
     const db = getDB();
-    const { category = 'all', waktu = 'all', date_filter = 'all', limit = 500, lat, lng, radius } = req.query;
+    const { category = 'all', waktu = 'all', date_filter = 'all', lat, lng, radius } = req.query;
+    
+    // Clamp limit to prevent excessive DB load (max 500)
+    let limit = parseInt(req.query.limit, 10);
+    if (isNaN(limit) || limit <= 0) limit = 500;
+    if (limit > 500) limit = 500;
 
     let sql = `
       SELECT id, latitude, longitude, lat_end, lng_end,
@@ -157,7 +163,7 @@ router.get('/', validateGetReports, handleValidationErrors, (req, res) => {
 
 // ─── POST / — Buat laporan baru ───────────────────────────────────────────────
 router.post('/',
-  reportLimiter, sanitizeBody, detectSQLInjection,
+  verifyCaptcha, reportLimiter, sanitizeBody, detectSQLInjection,
   validateReport, handleValidationErrors,
   (req, res) => {
     try {
@@ -281,7 +287,7 @@ router.post('/:id/comments',
       const { id } = req.params;
       let { comment, status_update } = req.body;
       const ipHash = hashIP(req.ip || req.socket.remoteAddress || '');
-      const commentId = uuidv4();
+      const commentId = crypto.randomUUID();
 
       const reports = dbAll(db, `SELECT id FROM reports WHERE id=? AND is_active=1`, [id]);
       if (reports.length === 0) return res.status(404).json({ success: false, message: 'Laporan tidak ditemukan' });
@@ -332,7 +338,7 @@ router.post('/:id/comments',
 
 // ─── Hapus Laporan (Admin Only) ───────────────────────────────────────────────
 router.delete('/:id',
-  adminAuth,
+  adminLimiter, adminAuth,
   (req, res) => {
     try {
       const db = getDB();

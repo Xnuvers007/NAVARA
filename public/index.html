@@ -106,11 +106,11 @@
 
 
   <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="anonymous"/>
   <!-- Font Awesome 6 Free -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha384-/o6I2CkkWC//PSjvWC/eYN7l3xM3tJm8ZzVkCOfp//W05QcE3mlGskpoHB6XqI+B" crossorigin="anonymous"/>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet"/>
@@ -172,8 +172,14 @@
       </div>
     </nav>
 
-    <!-- Header actions -->
-    <div class="header-actions">
+    <!-- Header actions (Sidebar on mobile) -->
+    <div class="header-actions" id="sidebar-menu">
+      <div class="sidebar-header show-mobile-sidebar">
+        <span class="sidebar-title">Menu Navigasi</span>
+        <button class="btn-close-sidebar" id="btn-close-sidebar" aria-label="Tutup menu">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
       <button class="btn-ai-header" id="btn-ai-header" aria-label="Analisis AI Pintar">
         <i class="fa-solid fa-brain" aria-hidden="true"></i> AI Insight
       </button>
@@ -181,7 +187,7 @@
         <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
         <span class="hidden-mobile">Tips</span>
       </button>
-      <a href="/api-docs.html" target="_blank" class="btn-api-docs" aria-label="Dokumentasi API Terbuka" style="color:#cbd5e1; text-decoration:none; padding:8px 12px; border-radius:8px; border:1px solid #334155; font-size:14px; font-weight:600; display:flex; gap:6px; align-items:center; transition:0.3s; background:#1e293b;">
+      <a href="/api-docs.html" target="_blank" class="btn-api-docs" aria-label="Dokumentasi API Terbuka">
         <i class="fa-solid fa-code" aria-hidden="true"></i>
         <span class="hidden-mobile">API</span>
       </a>
@@ -191,11 +197,21 @@
         <span class="hidden-mobile">Donasi</span>
       </a>
       <button class="btn-report-header" id="btn-open-report" aria-label="Buat laporan kejadian baru" aria-haspopup="dialog">
-        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Laporkan
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        <span class="hidden-mobile">Laporkan</span>
+        <span class="show-mobile">Lapor</span>
       </button>
     </div>
+
+    <!-- Hamburger Menu Button -->
+    <button class="hamburger-btn" id="hamburger-btn" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="sidebar-menu">
+      <i class="fa-solid fa-bars" aria-hidden="true"></i>
+    </button>
   </div>
 </header>
+
+<!-- Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
 
 <!-- ─── MAP ────────────────────────────────────────────────────────────────── -->
 <main class="map-wrapper" role="main">
@@ -759,6 +775,22 @@
         <div class="field-error" id="err-desc" role="alert" aria-live="assertive"></div>
       </div>
 
+      <div class="form-group" style="background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+        <label for="field-captcha">
+          <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          Verifikasi Keamanan <span class="required" aria-label="wajib diisi">*</span>
+        </label>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
+          <span id="captcha-question" style="font-weight: bold; font-size: 1.1rem; background: rgba(0,0,0,0.3); padding: 6px 12px; border-radius: 6px; letter-spacing: 1px;">Memuat...</span>
+          <span style="font-weight: bold;">=</span>
+          <input type="number" id="field-captcha" name="captchaAnswer" placeholder="?" required aria-required="true" style="width: 80px; text-align: center; font-weight: bold; font-size: 1.1rem; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff;"/>
+          <button type="button" id="btn-refresh-captcha" style="background: none; border: none; color: #a855f7; cursor: pointer; padding: 4px;" aria-label="Muat ulang Captcha" title="Refresh Captcha">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+        <div class="field-error" id="err-captcha" role="alert" aria-live="assertive"></div>
+      </div>
+
       <div class="anon-note" role="note" aria-label="Informasi privasi laporan">
         <i class="fa-solid fa-lock" aria-hidden="true"></i>
         Laporan ini <strong>anonim sepenuhnya</strong>. Alamat IP di-hash dan tidak disimpan.
@@ -818,11 +850,11 @@
 </footer>
 
 <!-- ─── SCRIPTS ──────────────────────────────────────────────────────────── -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" integrity="sha384-mFKkGiGvT5vo1fEyGCD3hshDdKmW3wzXW/x+fWriYJArD0R3gawT6lMvLboM22c0" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" integrity="sha384-cwS6YdhLI7XS60eoDiC+egV0qHp8zI+Cms46R0nbn8JrmoAzV9uFL60etMZhAnSu" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" integrity="sha384-nLoOnA/BDh8A/jxqtckg4DumuCGOBYUnNJLZdQz/zfYNp3wcjGSoWTAzgko06G/2" crossorigin="anonymous"></script>
 <script src="/js/app.js"></script>
 
 </body>

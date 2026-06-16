@@ -3,7 +3,7 @@
    Strategi: Cache-first untuk aset statis, Network-first untuk API
    ═══════════════════════════════════════════════════════════ */
 
-const CACHE_NAME = 'begal-alert-v1.1';
+const CACHE_NAME = 'navara-v1.1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -30,7 +30,7 @@ self.addEventListener('activate', (event) => {
       Promise.all(
         keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
       )
-    ).then(() => self.clients.claim())
+    ).then(() => self.clients.claim().catch(e => console.warn('Clients claim error:', e)))
   );
 });
 
@@ -67,11 +67,13 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         })
-        .catch(() => {
+        .catch((err) => {
           // Offline fallback untuk navigasi
           if (event.request.mode === 'navigate') {
             return caches.match('/offline.html');
           }
+          // Lemparkan error agar fetch tidak return undefined
+          throw err;
         });
     })
   );

@@ -2,56 +2,794 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>NAVARA API Documentation</title>
-  <!-- Favicon / Theme -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="description" content="Dokumentasi API NAVARA - Navigasi Aman Berkendara. Referensi lengkap untuk integrasi dengan sistem NAVARA.">
   <meta name="theme-color" content="#0d1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>NAVARA API Documentation</title>
   <link rel="apple-touch-icon" href="/assets/icons/icon-512.png">
-  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
-    body {
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-card: #1c2128;
+      --accent-red: #ef4444;
+      --accent-red-dark: #dc2626;
+      --accent-purple: #8b5cf6;
+      --text-primary: #e6edf3;
+      --text-secondary: #8b949e;
+      --border-color: #30363d;
+      --header-height: 60px;
+    }
+
+    html, body {
       margin: 0;
       padding: 0;
-      background-color: #0d1117; /* Dark background default */
+      background-color: var(--bg-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
-    
-    /* Redoc styling overrides for dark mode feel */
-    redoc {
-      display: block;
-      background: #ffffff; 
+
+    /* ===== TOP HEADER BAR ===== */
+    .api-header {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      background: rgba(13, 17, 23, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
     }
-    
-    /* Tombol kembali ke NAVARA */
-    .back-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 1000;
-      background: #ef4444;
+
+    .api-header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .api-header-brand .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-red), #b91c1c);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .api-header-brand .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .api-header-brand .brand-name {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.1;
+      letter-spacing: 0.5px;
+    }
+
+    .api-header-brand .brand-sub {
+      font-size: 10px;
+      color: var(--text-secondary);
+      line-height: 1.2;
+    }
+
+    .api-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, var(--accent-red), #b91c1c);
       color: white;
-      padding: 10px 20px;
+      padding: 8px 14px;
       border-radius: 8px;
       text-decoration: none;
       font-family: 'Inter', sans-serif;
-      font-weight: bold;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      transition: all 0.3s;
+      font-weight: 600;
+      font-size: 13px;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
+      transition: all 0.25s ease;
+      white-space: nowrap;
+      border: 1px solid rgba(255,255,255,0.1);
     }
-    .back-btn:hover {
-      background: #dc2626;
+
+    .btn-back:hover {
+      background: linear-gradient(135deg, #dc2626, #991b1b);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45);
+    }
+
+    .btn-back:active {
+      transform: translateY(0);
+    }
+
+    .btn-back .btn-icon {
+      font-size: 14px;
+    }
+
+    .btn-back .btn-label {
+      display: inline;
+    }
+
+    /* ===== HERO BANNER ===== */
+    .api-hero {
+      background: linear-gradient(135deg, #161b22 0%, #1c2128 50%, #0d1117 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 28px 16px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .api-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 30% 40%, rgba(239, 68, 68, 0.06) 0%, transparent 60%),
+                  radial-gradient(ellipse at 70% 60%, rgba(139, 92, 246, 0.05) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .api-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .api-hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(20px, 5vw, 28px);
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .api-hero h1 span {
+      background: linear-gradient(135deg, var(--accent-red), #f87171);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .api-hero p {
+      margin: 0;
+      font-size: clamp(12px, 3vw, 14px);
+      color: var(--text-secondary);
+      max-width: 500px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* ===== STATS BAR ===== */
+    .api-stats {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .api-stats::-webkit-scrollbar { display: none; }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 20px;
+      border-right: 1px solid var(--border-color);
+      min-width: max-content;
+      flex: 1;
+    }
+
+    .stat-item:last-child {
+      border-right: none;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .stat-value.green { color: #22c55e; }
+    .stat-value.red { color: var(--accent-red); }
+    .stat-value.purple { color: var(--accent-purple); }
+    .stat-value.blue { color: #38bdf8; }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--text-secondary);
+      margin-top: 3px;
+      white-space: nowrap;
+    }
+
+    /* ===== REDOC WRAPPER ===== */
+    .redoc-wrapper {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
+    redoc {
+      display: block;
+    }
+
+    /* ===== LOADING STATE ===== */
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      gap: 16px;
+      color: var(--text-secondary);
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-color);
+      border-top-color: var(--accent-red);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    /* ===== REDOC MOBILE OVERRIDES ===== */
+    /* Force mobile-friendly layout in ReDoc */
+    @media (max-width: 768px) {
+      .api-header {
+        padding: 0 12px;
+      }
+
+      .btn-back .btn-label {
+        display: none;
+      }
+
+      .btn-back {
+        padding: 8px 10px;
+      }
+
+      .api-hero {
+        padding: 20px 12px 18px;
+      }
+
+      .stat-item {
+        padding: 10px 14px;
+      }
+
+      /* Make ReDoc responsive on mobile */
+      redoc .menu-content {
+        width: 100% !important;
+      }
+    }
+
+    /* ===== FOOTER ===== */
+    .api-footer {
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border-color);
+      padding: 20px 16px;
+      text-align: center;
+    }
+
+    .api-footer p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .api-footer a {
+      color: var(--accent-red);
+      text-decoration: none;
+    }
+
+    .api-footer .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .api-footer .footer-links a {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .api-footer .footer-links a:hover {
+      color: var(--text-primary);
+    }
+
+    /* ===== SCROLL TO TOP BUTTON ===== */
+    .scroll-top-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 16px;
+      z-index: 9998;
+      width: 44px;
+      height: 44px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      transition: all 0.25s ease;
+      opacity: 0;
+      pointer-events: none;
+      text-decoration: none;
+    }
+
+    .scroll-top-btn.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .scroll-top-btn:hover {
+      background: var(--accent-red);
+      border-color: var(--accent-red);
+      color: white;
       transform: translateY(-2px);
     }
+
+    /* ===== REDOC DARK THEME OVERRIDES ===== */
+
+    /* === Global dark background === */
+    .redoc-wrap { background: #0d1117 !important; color: #e6edf3 !important; }
+
+    /* === Main content panel === */
+    .redoc-wrap > div > div:nth-child(2) { background: #161b22 !important; }
+
+    /* === Sidebar === */
+    .menu-content { background: #0d1117 !important; }
+    .menu-content * { color: #8b949e; }
+    .menu-content li label span { color: #8b949e !important; }
+    .menu-content [class*="active"] label,
+    .menu-content [class*="active"] span,
+    .menu-content [data-item-active="true"] span { color: #e6edf3 !important; }
+
+    /* Search bar in sidebar */
+    .menu-content input,
+    input[placeholder="Search..."] {
+      background: #161b22 !important;
+      color: #e6edf3 !important;
+      border: 1px solid #30363d !important;
+    }
+
+    /* === All text === */
+    .redoc-wrap h1, .redoc-wrap h2, .redoc-wrap h3,
+    .redoc-wrap h4, .redoc-wrap h5 { color: #e6edf3 !important; }
+    .redoc-wrap p  { color: #c9d1d9 !important; }
+    .redoc-wrap td, .redoc-wrap th { color: #c9d1d9 !important; border-color: #30363d !important; }
+    .redoc-wrap table { background: transparent !important; }
+    .redoc-wrap tr   { background: transparent !important; }
+    .redoc-wrap tr:nth-child(even) { background: rgba(255,255,255,0.02) !important; }
+
+    /* === Code & pre blocks === */
+    .redoc-wrap pre,
+    .redoc-wrap code { background: #161b22 !important; color: #e6edf3 !important; }
+
+    /* === Right panel (code samples) === */
+    [class*="right-panel"] { background: #0d1117 !important; }
+    [class*="right-panel"] * { color: #e6edf3 !important; }
+
+    /* === REQUEST SAMPLES TAB (Payload tab fix) ===
+       ReDoc uses react-tabs classes — target them directly */
+    .react-tabs__tab-list {
+      background: #161b22 !important;
+      border-color: #30363d !important;
+    }
+    .react-tabs__tab {
+      background: #1c2128 !important;
+      color: #8b949e !important;
+      border: 1px solid #30363d !important;
+    }
+    .react-tabs__tab:hover {
+      color: #e6edf3 !important;
+      background: #21262d !important;
+    }
+    /* === THIS FIXES THE "PAYLOAD" INVISIBLE TEXT BUG === */
+    .react-tabs__tab--selected,
+    [class*="tab-success"].react-tabs__tab--selected,
+    [class*="tab-error"].react-tabs__tab--selected,
+    li[class*="react-tabs__tab--selected"] {
+      background: #0d1117 !important;
+      color: #ef4444 !important;
+      border-bottom-color: #0d1117 !important;
+    }
+
+    /* === Tab panel (content under Payload tab) === */
+    .react-tabs__tab-panel { background: #0d1117 !important; color: #e6edf3 !important; }
+    .react-tabs__tab-panel * { color: #e6edf3 !important; }
+
+    /* === Content type dropdown === */
+    [class*="content-type"],
+    [class*="ContentType"] { color: #8b949e !important; background: #161b22 !important; }
+
+    /* === Schema property names & types === */
+    [class*="property-name"] { color: #79c0ff !important; }
+    [class*="property-type"],
+    [class*="type-name"]    { color: #a855f7 !important; }
+    [class*="required"]     { color: #ef4444 !important; }
+
+    /* === Response/status tabs === */
+    [class*="tab-success"] { color: #22c55e !important; }
+    [class*="tab-error"]   { color: #ef4444 !important; }
+    [class*="tab-redirect"] { color: #f59e0b !important; }
+
+    /* === Response code badge backgrounds === */
+    [class*="response-"] { background: transparent !important; }
+
+    /* === Misc white leak fixes & Form Elements === */
+    [class*="Endpoint"] { background: #161b22 !important; }
+    [class*="Operation"] { border-color: #30363d !important; }
+    details > summary { color: #e6edf3 !important; }
+    details > summary:hover { background: rgba(255,255,255,0.04) !important; }
+
+    /* Inputs, Textareas, Selects, and Dropdown wrappers — super agresif */
+    input, textarea, select,
+    .redoc-wrap input,
+    .redoc-wrap textarea,
+    .redoc-wrap select,
+    .redoc-wrap [role="textbox"],
+    .redoc-wrap [role="combobox"],
+    .redoc-wrap [role="listbox"],
+    .redoc-wrap [class*="Input"],
+    .redoc-wrap [class*="Select"],
+    .redoc-wrap [class*="Dropdown"],
+    .redoc-wrap [class*="TextArea"],
+    .redoc-wrap [class*="ServerContainer"],
+    .redoc-wrap [class*="ServerWrapper"],
+    .redoc-wrap [class*="ServerItem"],
+    .redoc-wrap [class*="server-url"],
+    .redoc-wrap [class*="ServerUrl"],
+    .redoc-wrap [class*="server_"],
+    [class*="ServerContainer"],
+    [class*="ServerWrapper"],
+    [class*="ServerItem"],
+    [class*="server-url"],
+    [class*="ServerUrl"] {
+      background-color: #161b22 !important;
+      color: #e6edf3 !important;
+      border-color: #30363d !important;
+    }
+
+    /* === Fix white background on ANY div/span inside right-panel === */
+    [class*="right-panel"] { background: #0d1117 !important; }
+    [class*="right-panel"] > * { background: #0d1117 !important; }
+    [class*="right-panel"] div { background-color: transparent !important; }
+    [class*="right-panel"] div[style*="background"] { background-color: #161b22 !important; }
+
+    /* === Target Server selector box specifically === */
+    [class*="ServerSelector"],
+    [class*="server-selector"],
+    [class*="ServerVariables"],
+    [class*="ServerVariableInput"] {
+      background: #161b22 !important;
+      color: #e6edf3 !important;
+      border: 1px solid #30363d !important;
+    }
+
+    /* Nuke any white or light backgrounds throughout entire Redoc */
+    .redoc-wrap [style*="background: rgb(255"],
+    .redoc-wrap [style*="background: white"],
+    .redoc-wrap [style*="background-color: white"],
+    .redoc-wrap [style*="background-color: rgb(255"] {
+      background-color: #161b22 !important;
+    }
+
+    /* === FIX WHITE SERVER BOX IN RIGHT PANEL (Minified Class Fix) === */
+    /* Target divs inside right panel that precede react-tabs (usually the Server box) */
+    .redoc-wrap [class*="right-panel"] > div > div:not([class*="react-tabs"]) {
+      background-color: #161b22 !important;
+      border: 1px solid #30363d !important;
+      border-radius: 4px;
+      color: #e6edf3 !important;
+    }
+    /* Force inner wrappers to be transparent */
+    .redoc-wrap [class*="right-panel"] > div > div:not([class*="react-tabs"]) div {
+      background-color: transparent !important;
+      color: #e6edf3 !important;
+    }
+    /* Keep Endpoint HTTP block background transparent so it blends */
+    .redoc-wrap [class*="right-panel"] > div > div:first-child {
+      background-color: transparent !important;
+      border: none !important;
+    }
+
+    /* Force all labels & spans inside redoc to be readable */
+    .redoc-wrap label { color: #8b949e !important; }
+    .redoc-wrap span  { color: inherit; }
+
+    /* === Copy button in code samples === */
+    button[class*="copy"],
+    button[aria-label*="copy"] {
+      background: #21262d !important;
+      color: #8b949e !important;
+      border: 1px solid #30363d !important;
+    }
+    button[class*="copy"]:hover { color: #e6edf3 !important; background: #30363d !important; }
   </style>
 </head>
 <body>
-  
-  <a href="/" class="back-btn">← Kembali ke Peta NAVARA</a>
 
-  <!-- Redoc Element -->
-  <redoc spec-url='/openapi.yaml'></redoc>
+  <!-- ===== TOP HEADER ===== -->
+  <header class="api-header">
+    <a href="/" class="api-header-brand" id="header-brand-link">
+      <div class="logo-icon">🛡️</div>
+      <div class="brand-text">
+        <span class="brand-name">NAVARA</span>
+        <span class="brand-sub">API Documentation</span>
+      </div>
+    </a>
+    <div class="api-header-actions">
+      <a href="/" class="btn-back" id="btn-back-to-map">
+        <span class="btn-icon">←</span>
+        <span class="btn-label">Kembali ke Peta</span>
+      </a>
+    </div>
+  </header>
 
-  <!-- Redoc JS -->
+  <!-- ===== HERO SECTION ===== -->
+  <section class="api-hero">
+    <div class="api-hero-badge">
+      <span>⚡</span>
+      <span>REST API v1.0</span>
+    </div>
+    <h1>NAVARA <span>API</span> Reference</h1>
+    <p>Dokumentasi lengkap untuk integrasi dengan sistem NAVARA — Navigasi Aman Berkendara</p>
+  </section>
+
+  <!-- ===== STATS BAR ===== -->
+  <div class="api-stats" role="list" aria-label="API Statistics">
+    <div class="stat-item" role="listitem">
+      <span class="stat-value green">Online</span>
+      <span class="stat-label">Status API</span>
+    </div>
+    <div class="stat-item" role="listitem">
+      <span class="stat-value blue">REST</span>
+      <span class="stat-label">Protocol</span>
+    </div>
+    <div class="stat-item" role="listitem">
+      <span class="stat-value purple">JSON</span>
+      <span class="stat-label">Format</span>
+    </div>
+    <div class="stat-item" role="listitem">
+      <span class="stat-value red">v1.0</span>
+      <span class="stat-label">Versi</span>
+    </div>
+  </div>
+
+  <!-- ===== LOADING SCREEN ===== -->
+  <div class="loading-screen" id="loading-screen" role="status" aria-live="polite">
+    <div class="loading-spinner"></div>
+    <span class="loading-text">Memuat dokumentasi API...</span>
+  </div>
+
+  <!-- ===== REDOC ELEMENT ===== -->
+  <div class="redoc-wrapper">
+    <div id="redoc-container" style="display:none;"></div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="api-footer">
+    <p>🛡️ <strong style="color: var(--text-primary)">NAVARA</strong> — Navigasi Aman Berkendara</p>
+    <p>Dokumentasi API ini dibuat untuk membantu pengembang mengintegrasikan layanan NAVARA.</p>
+    <div class="footer-links">
+      <a href="/" id="footer-link-map">🗺️ Buka Peta</a>
+      <a href="mailto:xnuversh1kar4@gmail.com" id="footer-link-support">📧 Support</a>
+      <a href="/openapi.yaml" id="footer-link-spec" download>📄 Unduh OpenAPI Spec</a>
+    </div>
+  </footer>
+
+  <!-- ===== SCROLL TO TOP ===== -->
+  <a href="#" class="scroll-top-btn" id="scroll-top-btn" aria-label="Scroll ke atas">↑</a>
+
+  <!-- ===== REDOC JS (async load) ===== -->
+  <script>
+    // Show ReDoc after it's rendered
+    window.addEventListener('load', function () {
+      const loadingScreen = document.getElementById('loading-screen');
+      const redocContainer = document.getElementById('redoc-container');
+
+      // Wait a bit then show
+      setTimeout(function () {
+        if (loadingScreen) loadingScreen.style.display = 'none';
+        if (redocContainer) redocContainer.style.display = 'block';
+      }, 1500);
+    });
+
+    // Scroll to top button logic
+    const scrollBtn = document.getElementById('scroll-top-btn');
+    window.addEventListener('scroll', function () {
+      if (window.scrollY > 300) {
+        scrollBtn.classList.add('visible');
+      } else {
+        scrollBtn.classList.remove('visible');
+      }
+    });
+
+    scrollBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  </script>
+
+  <!-- ReDoc standalone bundle -->
   <script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"></script>
+
+  <!-- Initialize ReDoc with full dark theme -->
+  <script>
+    window.addEventListener('load', function () {
+      Redoc.init(
+        '/openapi.yaml',
+        {
+          scrollYOffset: 0,
+          hideDownloadButton: false,
+          disableSearch: false,
+          expandResponses: '200,201',
+          jsonSampleExpandLevel: 2,
+          theme: {
+            colors: {
+              primary: { main: '#ef4444' },
+              success: { main: '#22c55e' },
+              warning: { main: '#f59e0b' },
+              error:   { main: '#ef4444' },
+              text: {
+                primary:   '#e6edf3',
+                secondary: '#8b949e'
+              },
+              border: { dark: '#30363d', light: '#21262d' },
+              responses: {
+                success: { color: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', tabTextColor: '#22c55e' },
+                error:   { color: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)', tabTextColor: '#ef4444' },
+                redirect: { color: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.08)', tabTextColor: '#f59e0b' },
+                info:     { color: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.08)', tabTextColor: '#38bdf8' }
+              },
+              http: {
+                get:    '#22c55e',
+                post:   '#3b82f6',
+                put:    '#f59e0b',
+                delete: '#ef4444',
+                patch:  '#a855f7'
+              }
+            },
+            typography: {
+              fontSize:       '15px',
+              lineHeight:     '1.65',
+              fontWeightRegular: '400',
+              fontWeightBold:    '700',
+              fontWeightLight:   '300',
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+              smoothing: 'antialiased',
+              optimizeSpeed: true,
+              headings: {
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: '700',
+                lineHeight: '1.3'
+              },
+              code: {
+                fontSize:        '13.5px',
+                fontFamily:      "'SF Mono', 'Fira Code', 'Consolas', monospace",
+                lineHeight:      '1.6',
+                fontWeight:      '400',
+                color:           '#e6edf3',
+                backgroundColor: '#161b22',
+                wrap:            true
+              },
+              links: {
+                color: '#ef4444',
+                visited: '#dc2626',
+                hover: '#f87171'
+              }
+            },
+            sidebar: {
+              width:           '260px',
+              backgroundColor: '#0d1117',
+              textColor:       '#8b949e',
+              activeTextColor: '#e6edf3',
+              groupItems: { activeBackgroundColor: 'rgba(239,68,68,0.08)' },
+              level1Items: { activeBackgroundColor: 'rgba(239,68,68,0.06)' }
+            },
+            logo: { gutter: '16px' },
+            rightPanel: {
+              backgroundColor: '#0d1117',
+              width:           '40%',
+              textColor:       '#e6edf3',
+              servers: {
+                overlay: {
+                  backgroundColor: '#161b22',
+                  textColor: '#e6edf3'
+                },
+                url: {
+                  backgroundColor: '#161b22'
+                }
+              }
+            },
+            schema: {
+              nestedBackground: '#161b22',
+              linesColor:       '#30363d',
+              defaultDetailsWidth: '75%',
+              typeNameColor:    '#a855f7',
+              typeTitleColor:   '#8b949e',
+              requireLabelColor: '#ef4444',
+              labelsTextSize:   '0.85em',
+              nestingSpacing:   '1em'
+            },
+            codeBlock: {
+              backgroundColor: '#161b22'
+            },
+            fab: { backgroundColor: '#ef4444', color: '#ffffff' }
+          }
+        },
+        document.getElementById('redoc-container'),
+        function () {
+          // Callback saat render selesai
+          var loading = document.getElementById('loading-screen');
+          var container = document.getElementById('redoc-container');
+          if (loading) loading.style.display = 'none';
+          if (container) container.style.display = 'block';
+        }
+      );
+    });
+  </script>
 
 </body>
 </html>

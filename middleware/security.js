@@ -8,10 +8,10 @@ const { body, param, query, validationResult } = require('express-validator');
 const xss = require('xss');
 const crypto = require('crypto');
 
-// ─── Helper: Hash IP untuk privasi user ──────────────────────────────────────
+// ─── Helper: Hash IP untuk privasi user (HMAC-SHA256) ─────────────────────────
 function hashIP(ip) {
   const salt = process.env.IP_SALT || 'begal-alert-salt-2024-x9z';
-  return crypto.createHash('sha256').update(ip + salt).digest('hex').slice(0, 16);
+  return crypto.createHmac('sha256', salt).update(ip).digest('hex').slice(0, 16);
 }
 
 // ─── Rate Limiter: Global semua endpoint ─────────────────────────────────────
@@ -63,6 +63,16 @@ const commentLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Terlalu banyak komentar dari IP ini. Harap tunggu sebentar.' }
+});
+
+// ─── Rate limiter untuk aksi Admin ───────────────────────────────────────────
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 10, // Maksimal 10 percobaan per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => hashIP(req.ip || req.socket.remoteAddress || ''),
+  message: { success: false, message: 'Terlalu banyak percobaan pada endpoint admin.' }
 });
 
 // ─── XSS Sanitizer ───────────────────────────────────────────────────────────
@@ -229,11 +239,11 @@ function handleValidationErrors(req, res, next) {
 
 // ─── Anti SQL Injection pattern check ────────────────────────────────────────
 function detectSQLInjection(req, res, next) {
+  // Regex diperbarui untuk menghindari false positive pada kata-kata umum seperti "update", "drop"
+  // Karena kita menggunakan Parameterized Query SQLite, proteksi utamanya ada pada db.run(..., [params])
   const suspiciousPatterns = [
-    /(\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b|\bDROP\b|\bUNION\b|\bEXEC\b|\bTRUNCATE\b)/i,
     /(--|;--|\/\*|\*\/|xp_|0x[0-9a-fA-F]+)/i,
     /(\bOR\b\s+[\d'"]+=[\d'"]+|\bAND\b\s+[\d'"]+=[\d'"]+)/i,
-    /char\s*\(\s*\d+/i,
     /WAITFOR\s+DELAY/i
   ];
 
@@ -370,9 +380,13 @@ const helmetConfig = {
       imgSrc: [
         "'self'",
         "data:",
+        "blob:",
         "https://*.tile.openstreetmap.org",
         "https://unpkg.com",
-        "https://cdnjs.cloudflare.com"
+        "https://cdnjs.cloudflare.com",
+        "https://cdn.redoc.ly",
+        "https://fonts.googleapis.com",
+        "https://fonts.gstatic.com"
       ],
       // Allow source maps & SSE from CDNs + self
       connectSrc: [
@@ -401,11 +415,60 @@ const helmetConfig = {
 const adminAuth = (req, res, next) => {
   const adminKey = req.headers['x-admin-key'];
   const secret = process.env.ADMIN_SECRET || 'admin123';
-  if (!adminKey || adminKey !== secret) {
+  
+  if (!adminKey || typeof adminKey !== 'string') {
     return res.status(401).json({ success: false, message: 'Unauthorized: Invalid Admin Password' });
   }
+
+  // Hash both strings to ensure equal length buffers and prevent leaking secret length
+  const expectedHash = crypto.createHash('sha256').update(secret).digest();
+  const providedHash = crypto.createHash('sha256').update(adminKey).digest();
+
+  if (!crypto.timingSafeEqual(expectedHash, providedHash)) {
+    return res.status(401).json({ success: false, message: 'Unauthorized: Invalid Admin Password' });
+  }
+
   next();
 };
+
+// ─── Captcha Middleware (Stateless) ─────────────────────────────────────────
+const CAPTCHA_SECRET = process.env.CAPTCHA_SECRET || 'begal-alert-captcha-secret-x123';
+
+function generateCaptchaToken(answer) {
+  const timestamp = Date.now();
+  const payload = `${answer}:${timestamp}`;
+  const signature = crypto.createHmac('sha256', CAPTCHA_SECRET).update(payload).digest('hex');
+  return `${timestamp}.${signature}`;
+}
+
+function verifyCaptcha(req, res, next) {
+  const token = req.headers['x-captcha-token'] || req.body.captchaToken;
+  const userAnswer = req.body.captchaAnswer;
+
+  if (!token || userAnswer === undefined || userAnswer === null) {
+    return res.status(400).json({ success: false, message: 'Tantangan keamanan (Captcha) wajib diisi.' });
+  }
+
+  const [timestamp, signature] = token.split('.');
+  if (!timestamp || !signature) {
+    return res.status(400).json({ success: false, message: 'Token Captcha tidak valid.' });
+  }
+
+  // Cek kedaluwarsa (3 menit)
+  if (Date.now() - parseInt(timestamp, 10) > 3 * 60 * 1000) {
+    return res.status(400).json({ success: false, message: 'Captcha sudah kedaluwarsa. Silakan muat ulang halaman.' });
+  }
+
+  // Verifikasi signature dengan jawaban dari user
+  const expectedPayload = `${userAnswer}:${timestamp}`;
+  const expectedSignature = crypto.createHmac('sha256', CAPTCHA_SECRET).update(expectedPayload).digest('hex');
+
+  if (signature !== expectedSignature) {
+    return res.status(400).json({ success: false, message: 'Jawaban verifikasi keamanan salah.' });
+  }
+
+  next();
+}
 
 module.exports = {
   globalLimiter,
@@ -428,6 +491,9 @@ module.exports = {
   helmetConfig,
   hashIP,
   adminAuth,
+  adminLimiter,
+  generateCaptchaToken,
+  verifyCaptcha,
   VALID_CATEGORIES,
   VALID_CITIES,
   VALID_WAKTU

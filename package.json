@@ -1,6 +1,6 @@
 {
-  "name": "begal-alert",
-  "version": "1.0.0",
+  "name": "navara",
+  "version": "1.2.0",
   "description": "Aplikasi Crowdsource Peta Rawan Begal Indonesia",
   "main": "server.js",
   "scripts": {
