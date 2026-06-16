@@ -40,24 +40,6 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/server.js",
-      "headers": {
-        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate"
-      }
-    },
-    {
-      "src": "/health",
-      "dest": "/server.js"
-    },
-    {
-      "src": "/",
-      "dest": "/public/index.html",
-      "headers": {
-        "Cache-Control": "s-maxage=3600, stale-while-revalidate=86400"
-      }
-    },
-    {
       "src": "/(.*)",
       "dest": "/server.js"
     }
