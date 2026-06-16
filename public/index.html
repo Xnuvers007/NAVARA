@@ -10,18 +10,100 @@
 
   <title>NAVARA 🛡️ — Navigasi Aman Berkendara</title>
 
-  <!-- PWA -->
+  <!-- PWA & Mobile Optimization -->
   <link rel="manifest" href="/manifest.json"/>
-  <link rel="apple-touch-icon" href="/assets/icons/icon-512.png"/>
+  <link rel="apple-touch-icon" sizes="512x512" href="/assets/icons/icon-512.png"/>
   <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="NAVARA"/>
+  <meta name="application-name" content="NAVARA"/>
+  <meta name="msapplication-TileColor" content="#0d1117"/>
+  <meta name="msapplication-navbutton-color" content="#0d1117"/>
+  <meta name="format-detection" content="telephone=no"/>
 
-  <!-- Open Graph -->
-  <meta property="og:title" content="NAVARA — Navigasi Aman Berkendara"/>
-  <meta property="og:description" content="Menyuluh jalan di tengah gulita, menghalau petaka dalam kebersamaan. Peta rawan kejahatan. By Xnuvers007."/>
+  <!-- Preconnect & DNS Prefetch (Kecepatan Loading SEO) -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin/>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin/>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
+  <link rel="dns-prefetch" href="https://unpkg.com"/>
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com"/>
+
+  <!-- Advanced SEO & Meta Tags -->
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"/>
+  <meta name="googlebot" content="index, follow"/>
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"/>
+  <meta name="keywords" content="navara, aplikasi keamanan jalan, peta rawan begal, lapor begal indonesia, keamanan jalan raya, begal tracker, lapor kecelakaan, xnuvers007, navigasi aman, peta kriminalitas, cegah kejahatan jalanan, cctv jalan raya"/>
+  <meta name="classification" content="Safety, Navigation, Map"/>
+  <meta name="category" content="Safety & Navigation"/>
+  <meta name="coverage" content="Indonesia"/>
+  <meta name="rating" content="General"/>
+  <meta name="revisit-after" content="1 days"/>
+  <link rel="canonical" href="https://navara-phi.vercel.app/"/>
+  <link rel="alternate" hreflang="id" href="https://navara-phi.vercel.app/"/>
+  <link rel="alternate" hreflang="x-default" href="https://navara-phi.vercel.app/"/>
+
+  <!-- Geo Meta Tags (SEO Lokal) -->
+  <meta name="geo.region" content="ID"/>
+  <meta name="geo.placename" content="Indonesia"/>
+  <meta name="geo.position" content="-0.789275;113.921327"/>
+  <meta name="ICBM" content="-0.789275, 113.921327"/>
+
+  <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
   <meta property="og:type" content="website"/>
-  <meta property="og:image" content="/assets/icons/icon-512.png"/>
+  <meta property="og:url" content="https://navara-phi.vercel.app/"/>
+  <meta property="og:site_name" content="NAVARA Tracker"/>
+  <meta property="og:title" content="NAVARA 🛡️ — Peta Navigasi & Pelaporan Aman Berkendara"/>
+  <meta property="og:description" content="Menyuluh jalan di tengah gulita, menghalau petaka dalam kebersamaan. Aplikasi peta real-time untuk memantau dan melaporkan area rawan begal, kecelakaan, dan kriminalitas di Indonesia."/>
+  <meta property="og:image" content="https://navara-phi.vercel.app/assets/icons/icon-512.png"/>
+  <meta property="og:image:secure_url" content="https://navara-phi.vercel.app/assets/icons/icon-512.png"/>
+  <meta property="og:image:type" content="image/png"/>
+  <meta property="og:image:width" content="512"/>
+  <meta property="og:image:height" content="512"/>
+  <meta property="og:image:alt" content="Logo Perisai NAVARA - Navigasi Aman Berkendara"/>
+  <meta property="og:locale" content="id_ID"/>
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:url" content="https://navara-phi.vercel.app/"/>
+  <meta name="twitter:title" content="NAVARA 🛡️ — Peta Navigasi & Pelaporan Aman Berkendara"/>
+  <meta name="twitter:description" content="Pantau area rawan dan laporkan insiden jalan raya (begal, kecelakaan, dll) secara real-time. Keselamatan bersama dimulai dari sini."/>
+  <meta name="twitter:image" content="https://navara-phi.vercel.app/assets/icons/icon-512.png"/>
+  <meta name="twitter:image:alt" content="Logo NAVARA"/>
+  <meta name="twitter:creator" content="@Xnuvers007"/>
+  <meta name="twitter:site" content="@Xnuvers007"/>
+
+  <!-- Schema.org JSON-LD (Structured Data Google) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "NAVARA",
+    "alternateName": "Navigasi Aman Berkendara",
+    "url": "https://navara-phi.vercel.app/",
+    "logo": "https://navara-phi.vercel.app/assets/icons/icon-512.png",
+    "description": "Aplikasi peta berbasis komunitas untuk melaporkan dan memantau daerah rawan kejahatan (begal, jambret) dan insiden jalan raya di Indonesia.",
+    "applicationCategory": "MapsApplication",
+    "operatingSystem": "All",
+    "author": {
+      "@type": "Person",
+      "name": "Xnuvers007"
+    },
+    "inLanguage": "id-ID",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "IDR"
+    },
+    "featureList": [
+      "Pelaporan Insiden Real-time",
+      "Peta Interaktif Area Rawan",
+      "Sistem Validasi Komunitas",
+      "Notifikasi Bahaya"
+    ]
+  }
+  </script>
+
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -544,15 +626,20 @@
         aria-label="Status pemilihan lokasi" role="status" aria-live="polite">
         <div class="loc-group">
           <div class="loc-dot" id="loc-dot-start" aria-hidden="true"></div>
-          <span id="loc-text-start">Belum ada lokasi dipilih</span>
+          <div style="flex:1">
+            <label for="manual-coord" style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 2px; display:block">Koordinat Kejadian (Klik Peta):</label>
+            <input type="text" id="manual-coord" placeholder="Contoh: -2.50487, 156.12345" 
+                   style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:#fff; width:100%; padding:6px 10px; border-radius:6px; font-family:monospace; font-size:0.95rem; margin-top:2px; outline:none; transition: border-color 0.2s ease;" 
+                   aria-label="Koordinat Lokasi Kejadian" autocomplete="off" required/>
+          </div>
         </div>
         <div class="loc-group route-only hidden" id="loc-group-end">
           <div class="loc-dot loc-dot-end" id="loc-dot-end" aria-hidden="true"></div>
           <span id="loc-text-end">Titik akhir rute belum dipilih</span>
         </div>
         <button type="button" class="btn-gps" id="btn-gps"
-          aria-label="Gunakan GPS untuk menentukan lokasi saya">
-          <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> GPS
+          aria-label="Gunakan GPS untuk menentukan lokasi saya" style="margin-top: 8px; width: 100%;">
+          <i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> Gunakan GPS Saya
         </button>
       </div>
 

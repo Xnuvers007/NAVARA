@@ -309,16 +309,23 @@ function strictOriginCheck(req, res, next) {
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
     const origin = req.headers.origin;
     const referer = req.headers.referer;
-    const allowedOrigin = process.env.ALLOWED_ORIGIN || 
-                          (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${process.env.PORT || 8080}`);
+    // Validasi Origin: Izinkan localhost, vercel.app, atau ALLOWED_ORIGIN dari env
+    if (origin) {
+      const isVercel = process.env.VERCEL && origin.endsWith('.vercel.app');
+      const isLocal = origin.startsWith('http://localhost:');
+      const isAllowed = process.env.ALLOWED_ORIGIN && origin.startsWith(process.env.ALLOWED_ORIGIN);
+      
+      if (!isVercel && !isLocal && !isAllowed) {
+        return res.status(403).json({ success: false, message: 'Forbidden: Invalid Origin' });
+      }
+    } else if (referer) {
+      const isVercel = process.env.VERCEL && referer.includes('.vercel.app');
+      const isLocal = referer.includes('localhost:');
+      const isAllowed = process.env.ALLOWED_ORIGIN && referer.startsWith(process.env.ALLOWED_ORIGIN);
 
-    // Memastikan Origin atau Referer valid (sama dengan allowedOrigin)
-    // Jika origin tidak ada, kita bisa menggunakan referer
-    if (origin && !origin.startsWith(allowedOrigin)) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Invalid Origin' });
-    }
-    if (!origin && referer && !referer.startsWith(allowedOrigin)) {
-      return res.status(403).json({ success: false, message: 'Forbidden: Invalid Referer' });
+      if (!isVercel && !isLocal && !isAllowed) {
+        return res.status(403).json({ success: false, message: 'Forbidden: Invalid Referer' });
+      }
     }
   }
   next();

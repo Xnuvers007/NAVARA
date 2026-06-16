@@ -366,6 +366,24 @@ function initEventListeners() {
   // GPS
   document.getElementById('btn-gps').addEventListener('click', useGPS);
 
+  // Manual Coordinate Input
+  const manualCoord = document.getElementById('manual-coord');
+  if (manualCoord) {
+    manualCoord.addEventListener('input', e => {
+      // Basic sanitization
+      let val = e.target.value.replace(/[<>'"]/g, '').trim();
+      const parts = val.split(',');
+      if (parts.length >= 2) {
+        const lat = parseFloat(parts[0].trim());
+        const lng = parseFloat(parts[1].trim());
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          setStartPoint(lat, lng);
+          map.setView([lat, lng], 14);
+        }
+      }
+    });
+  }
+
   // Char counter
   document.getElementById('field-desc').addEventListener('input', e => {
     const len = e.target.value.length;
@@ -602,8 +620,10 @@ function setStartPoint(lat, lng) {
 
   const dot = document.getElementById('loc-dot-start');
   dot.classList.add('active');
-  document.getElementById('loc-text-start').innerHTML =
-    `<i class="fa-solid fa-circle-dot" style="color:#22c55e;font-size:10px" aria-hidden="true"></i> ${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  const manualCoord = document.getElementById('manual-coord');
+  if (manualCoord && document.activeElement !== manualCoord) {
+    manualCoord.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+  }
   document.getElementById('location-indicator').classList.add('has-start');
 
   if (tempMarkers[0]) map.removeLayer(tempMarkers[0]);
