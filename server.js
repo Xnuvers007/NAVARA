@@ -103,8 +103,10 @@ async function start() {
     await initDB();
     startAutoCleanup();
 
-    app.listen(PORT, () => {
-      const banner = `
+    // Vercel serverless functions do not need app.listen()
+    if (!process.env.VERCEL) {
+      app.listen(PORT, () => {
+        const banner = `
 \x1b[36m _   _    _     __     __    _    ____      _    
 | \\ | |  / \\    \\ \\   / /   / \\  |  _ \\    / \\   
 |  \\| | / _ \\    \\ \\ / /   / _ \\ | |_) |  / _ \\  
@@ -113,14 +115,15 @@ async function start() {
 
    \x1b[32m🛡️  NAVIGASI AMAN BERKENDARA 🛡️\x1b[0m
 =========================================
-      `;
-      console.log(banner);
-      console.log(`✅ Server berjalan di: \x1b[33mhttp://localhost:${PORT}\x1b[0m`);
-      console.log(`🔒 Security Level: \x1b[32mEnterprise Grade\x1b[0m`);
-      console.log(`🗄️ Database: \x1b[36mSQLite\x1b[0m`);
-      console.log(`📡 API: \x1b[33mhttp://localhost:${PORT}/api/reports\x1b[0m`);
-      console.log('=========================================\n');
-    });
+        `;
+        console.log(banner);
+        console.log(`✅ Server berjalan di: \x1b[33mhttp://localhost:${PORT}\x1b[0m`);
+        console.log(`🔒 Security Level: \x1b[32mEnterprise Grade\x1b[0m`);
+        console.log(`🗄️ Database: \x1b[36mSQLite\x1b[0m`);
+        console.log(`📡 API: \x1b[33mhttp://localhost:${PORT}/api/reports\x1b[0m`);
+        console.log('=========================================\n');
+      });
+    }
   } catch (err) {
     console.error('❌ Gagal menjalankan server:', err.message);
     process.exit(1);
@@ -128,3 +131,6 @@ async function start() {
 }
 
 start();
+
+// Ekspor untuk Vercel Serverless
+module.exports = app;
