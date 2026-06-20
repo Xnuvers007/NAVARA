@@ -297,7 +297,7 @@ body {
 .sidebar-overlay.open { opacity: 1; pointer-events: all; }
 .show-mobile-sidebar { display: none; }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .hamburger-btn { display: flex; align-items: center; justify-content: center; }
   .header-actions {
     position: fixed; top: 0; right: -280px; width: 260px; height: 100vh;
@@ -316,7 +316,7 @@ body {
   .sidebar-title { font-weight: 700; font-family: var(--font-d); font-size: 16px; color: var(--text-primary); }
   .btn-close-sidebar { background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; transition: var(--t); }
   .btn-close-sidebar:hover { color: var(--text-primary); }
-  .btn-ai-header, .btn-tips-header, .btn-donate, .btn-report-header, .btn-api-docs {
+  .btn-ai-header, .btn-tips-header, .btn-guide-header, .btn-donate, .btn-report-header, .btn-api-docs {
     width: 100%; justify-content: flex-start; margin-bottom: 10px;
     padding: 10px 14px;
   }
@@ -324,7 +324,7 @@ body {
   .header-actions span.show-mobile { display: none !important; }
 }
 
-.btn-ai-header, .btn-tips-header, .btn-donate, .btn-report-header, .btn-api-docs {
+.btn-ai-header, .btn-tips-header, .btn-guide-header, .btn-donate, .btn-report-header, .btn-api-docs {
   display: flex; align-items: center; gap: 6px;
   padding: 7px 14px;
   border-radius: var(--radius-md);
@@ -358,6 +358,12 @@ body {
   color: #fcd34d;
 }
 .btn-tips-header:hover { background: rgba(245,158,11,0.22); }
+.btn-guide-header {
+  background: rgba(59,130,246,0.12);
+  border: 1px solid rgba(59,130,246,0.3);
+  color: #93c5fd;
+}
+.btn-guide-header:hover { background: rgba(59,130,246,0.22); }
 .btn-donate {
   background: rgba(236,72,153,0.12);
   border: 1px solid rgba(236,72,153,0.3);

@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSSE();
   initEventListeners();
   initTipsModal();
+  initGuideModal();
   loadReports();
   loadStats();
 });
@@ -239,6 +240,46 @@ function closeTipsModal() {
   // Return focus to trigger
   document.getElementById('btn-tips-header')?.focus();
   announceToSR('Tips keselamatan ditutup. Selamat berkendara dengan aman.', false);
+}
+
+/* ─── GUIDE MODAL ─────────────────────────────────────────────────────────── */
+let guideReleaseFocus = null;
+
+function initGuideModal() {
+  document.getElementById('btn-guide-header')?.addEventListener('click', openGuideModal);
+  document.getElementById('guide-close')?.addEventListener('click', closeGuideModal);
+  document.getElementById('guide-overlay')?.addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeGuideModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('guide-overlay')?.classList.contains('open')) {
+        closeGuideModal();
+      }
+    }
+  });
+}
+
+function openGuideModal() {
+  const overlay = document.getElementById('guide-overlay');
+  const modal = document.getElementById('guide-modal');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  overlay.removeAttribute('hidden');
+  setTimeout(() => {
+    modal?.focus();
+    guideReleaseFocus = trapFocus(modal);
+  }, 200);
+  announceToSR('Panduan aplikasi terbuka.', false);
+}
+
+function closeGuideModal() {
+  const overlay = document.getElementById('guide-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+  if (guideReleaseFocus) { guideReleaseFocus(); guideReleaseFocus = null; }
+  document.getElementById('btn-guide-header')?.focus();
+  announceToSR('Panduan aplikasi ditutup.', false);
 }
 
 function switchTipsTab(tabKey) {

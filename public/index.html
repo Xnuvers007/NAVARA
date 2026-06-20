@@ -192,6 +192,10 @@
         <i class="fa-solid fa-lightbulb" aria-hidden="true"></i>
         <span class="hidden-mobile">Tips</span>
       </button>
+      <button class="btn-guide-header" id="btn-guide-header" aria-label="Panduan Penggunaan Aplikasi" title="Panduan Penggunaan">
+        <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+        <span class="hidden-mobile">Panduan</span>
+      </button>
       <a href="/api-docs.html" target="_blank" class="btn-api-docs" aria-label="Dokumentasi API Terbuka">
         <i class="fa-solid fa-code" aria-hidden="true"></i>
         <span class="hidden-mobile">API</span>
@@ -928,6 +932,58 @@
   </div>
 </div>
 
+
+<!-- ─── MODAL: Panduan Penggunaan ─────────────────────────── -->
+<div class="modal-overlay tips-overlay" id="guide-overlay" role="dialog" aria-modal="true" aria-labelledby="guide-title" aria-describedby="guide-desc" hidden>
+  <div class="modal tips-modal glass" id="guide-modal" tabindex="-1">
+    <div class="tips-header">
+      <div class="tips-header-left">
+        <div class="tips-icon-wrap" aria-hidden="true">
+          <i class="fa-solid fa-book-open"></i>
+        </div>
+        <div>
+          <h2 id="guide-title">Panduan Penggunaan NAVARA</h2>
+          <p id="guide-desc" class="tips-subtitle">Langkah mudah untuk menggunakan aplikasi ini</p>
+        </div>
+      </div>
+      <button class="modal-close" id="guide-close" aria-label="Tutup panduan">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="tips-panels" style="display: block; max-height: 60vh; overflow-y: auto;">
+      <div class="tips-panel active" style="display: block; visibility: visible; opacity: 1;">
+        <h3 class="tips-cat-title" style="color:#3b82f6"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Mari Kenali Fitur Utama Kami:</h3>
+        <ol class="tips-list">
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+            <div><strong>Membaca Peta Kejadian</strong><p>Anda bisa menggeser peta untuk melihat titik-titik lokasi. Setiap titik menandakan lokasi yang pernah terjadi tindak kejahatan atau bahaya. Tetap waspada jika melewati area tersebut!</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-filter" aria-hidden="true"></i>
+            <div><strong>Menggunakan Filter</strong><p>Ingin melihat laporan tertentu (seperti begal atau copet saja)? Klik tombol bergambar "corong" di atas peta. Anda juga bisa menyaring kejadian berdasarkan waktu dan tanggal.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+            <div><strong>Cara Melapor Kejadian</strong><p>Jika Anda melihat kejadian bahaya, klik tombol "Lapor" (gambar segitiga peringatan). Anda tinggal memilih lokasi kejadian di peta, lalu lengkapi detail waktunya dan ceritakan kronologi kejadiannya.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-route" aria-hidden="true"></i>
+            <div><strong>Cari Rute Perjalanan Aman</strong><p>Aplikasi ini dapat membantu Anda mencari jalan yang aman dan menghindari titik-titik rawan kejahatan. Klik tombol "Rute Aman" (gambar panah melengkung) lalu masukkan titik awal dan tujuan Anda.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-chart-bar" aria-hidden="true"></i>
+            <div><strong>Panel Statistik (Bisa Diperbesar/Diperkecil)</strong><p>Di sebelah kanan layar terdapat kotak informasi jumlah kejahatan. <strong>Kotak ini bisa Anda perkecil (collapse) agar tidak menutupi peta, atau Anda perbesar (expand) untuk melihat seluruh informasinya secara penuh.</strong> Klik ikon minus (-) untuk mengecilkan, atau panah menyebar untuk memperbesar panel.</p></div>
+          </li>
+          <li class="tips-item" tabindex="0">
+            <i class="fa-solid fa-robot" aria-hidden="true"></i>
+            <div><strong>Tanya Asisten Pintar (AI)</strong><p>Anda memiliki pertanyaan seputar keamanan jalan atau tips lainnya? Tanyakan langsung dengan menekan tombol "AI Insight" di menu atas, dan asisten kami akan segera menjawab.</p></div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ─── FOOTER BAR ────────────────────────────────────────────────────────── -->
 <footer class="footer-bar" role="contentinfo" aria-label="Informasi aplikasi">

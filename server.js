@@ -88,7 +88,7 @@ app.use('/api/reports', reportsRouter);
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), service: 'begal-alert' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), service: 'navara' });
 });
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────

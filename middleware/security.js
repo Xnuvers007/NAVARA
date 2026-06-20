@@ -10,7 +10,7 @@ const crypto = require('crypto');
 
 // ─── Helper: Hash IP untuk privasi user (HMAC-SHA256) ─────────────────────────
 function hashIP(ip) {
-  const salt = process.env.IP_SALT || 'begal-alert-salt-2024-x9z';
+  const salt = process.env.IP_SALT || 'navara-2026_CreatedBY_Xnuvers007';
   return crypto.createHmac('sha256', salt).update(ip).digest('hex').slice(0, 16);
 }
 
@@ -434,7 +434,7 @@ const adminAuth = (req, res, next) => {
 };
 
 // ─── Captcha Middleware (Stateless) ─────────────────────────────────────────
-const CAPTCHA_SECRET = process.env.CAPTCHA_SECRET || 'begal-alert-captcha-secret-x123';
+const CAPTCHA_SECRET = process.env.CAPTCHA_SECRET || 'navara-2026_CreatedBY_Xnuvers007';
 
 function generateCaptchaToken(answer) {
   const timestamp = Date.now();
