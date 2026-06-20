@@ -69,12 +69,52 @@ ADMIN_SECRET=admin123
 ALLOWED_ORIGIN=http://localhost:8080
 ```
 
-### 4. Jalankan Server
+### 4. Jalankan Server (Manual)
 Untuk menjalankan mode produksi/pengembangan:
 ```bash
 npm start
 ```
 Server akan berjalan di `http://localhost:8080`.
+
+### 🐳 5. Alternatif: Menjalankan dengan Docker (Rekomendasi)
+Jika Anda tidak ingin repot menginstal Node.js secara manual, Anda bisa langsung menjalankan aplikasi ini menggunakan Docker. Ini adalah cara termudah dan paling konsisten.
+
+**Prasyarat:**
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) atau Docker Engine + Docker Compose sudah terinstal di komputer Anda.
+
+**Langkah-langkah:**
+1. Clone repositori ini dan masuk ke dalam direktorinya (jika belum):
+   ```bash
+   git clone https://github.com/Xnuvers007/NAVARA.git
+   cd NAVARA
+   ```
+2. Jalankan perintah Docker Compose berikut di terminal:
+   ```bash
+   docker-compose up -d --build
+   ```
+3. Docker akan otomatis membuat environment, melakukan build, dan menjalankan aplikasi di *background* (`-d`).
+4. Buka browser dan akses `http://localhost:8080`.
+5. Untuk melihat *live logs* dari aplikasi yang berjalan di Docker:
+   ```bash
+   docker-compose logs -f
+   ```
+6. Untuk mematikan aplikasi:
+   ```bash
+   docker-compose down
+   ```
+7. **(Opsional) Bersihkan Total (Clean Up Khusus Navara):** Jika Anda ingin menghapus *hanya* aplikasi Navara ini hingga bersih total (menghapus container, image Navara, dan volume data aplikasi ini saja tanpa mengganggu project Docker lain):
+   ```bash
+   docker-compose down -v --rmi local
+   ```
+   *(Peringatan: Perintah di atas akan menghapus semua log dan laporan yang tersimpan pada aplikasi Navara ini menjadi seperti baru!)*
+
+   **Build Ulang Tanpa Cache:** Jika setelah dihapus Anda ingin merakit ulang (build) aplikasinya benar-benar dari awal (misal untuk memperbarui dependencies `npm install`) tanpa menggunakan sisa cache Docker, gunakan perintah ini:
+   ```bash
+   docker-compose build --no-cache
+   docker-compose up -d
+   ```
+
+*Catatan: Selama Anda hanya menggunakan `docker-compose down`, data dan database akan otomatis tersimpan (persisten) secara lokal pada folder `db` dan `data` berkat pengaturan Docker volume, sehingga laporan tidak akan hilang saat container dimatikan.*
 
 ---
 

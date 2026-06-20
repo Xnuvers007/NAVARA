@@ -1,0 +1,17 @@
+services:
+  navara:
+    build: .
+    container_name: navara-app
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      # Jangan lupa ubah secret ini di production!
+      - ADMIN_SECRET=admin123
+      - ALLOWED_ORIGIN=http://localhost:8080
+    volumes:
+      # Mount folder db dan data agar persisten meskipun container restart
+      - ./db:/app/db
+      - ./data:/app/data
+    restart: unless-stopped
